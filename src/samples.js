@@ -1,0 +1,41 @@
+// Fixed inputs for `aiflow doctor`. They are small on purpose: a calibration run costs about 3 000 tokens.
+
+export const SAMPLES = {
+  codeGroup: { key: 'code:src/utils', category: 'code', scope: 'utils', files: ['src/utils/math.js'], paths: ['src/utils/math.js'], message: null },
+  codeContext: [
+    ' src/utils/math.js | 7 +++++++',
+    ' 1 file changed, 7 insertions(+)',
+    '',
+    'diff --git a/src/utils/math.js b/src/utils/math.js',
+    'new file mode 100644',
+    '--- /dev/null',
+    '+++ b/src/utils/math.js',
+    '@@ -0,0 +1,7 @@',
+    '+export function sum(numbers) {',
+    '+  return numbers.reduce((total, value) => total + value, 0);',
+    '+}',
+    '+',
+    '+export function average(numbers) {',
+    '+  return numbers.length ? sum(numbers) / numbers.length : 0;',
+    '+}',
+  ].join('\n'),
+  docsGroup: { key: 'docs', category: 'docs', scope: null, files: ['README.md'], paths: ['README.md'], message: null },
+  docsContext: [
+    ' README.md | 4 ++++',
+    ' 1 file changed, 4 insertions(+)',
+    '',
+    '+## Installation',
+    '+',
+    '+Run `npm install` and then `npm run dev` to start the development server.',
+  ].join('\n'),
+  subjects: ['build(deps): update project dependencies', 'feat(components): add responsive navigation menu', 'docs: update installation guide'],
+  stat: [' package.json | 3 ++-', ' src/components/Nav.jsx | 42 ++++++++++++++++', ' README.md | 4 ++++', ' 3 files changed, 47 insertions(+), 2 deletions(-)'].join('\n'),
+  info: { name: 'demo-site', stack: ['JavaScript', 'React', 'Vite'], description: null },
+  tree: ['.', '\u251C\u2500\u2500 src/', '\u2502   \u251C\u2500\u2500 components/', '\u2502   \u2514\u2500\u2500 main.jsx', '\u251C\u2500\u2500 index.html', '\u2514\u2500\u2500 package.json'].join('\n'),
+  issue: {
+    request: 'The login button does nothing when pressed on mobile Safari',
+    branch: 'main',
+    recent: 'feat(auth): add login form\nfix(auth): validate email',
+    topLevel: ['src', 'public', 'package.json'],
+  },
+};

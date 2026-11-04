@@ -4,11 +4,11 @@ import path from 'node:path';
 import { UserError } from './errors.js';
 
 export function configDir() {
-  if (process.env.AIFLOW_HOME) return process.env.AIFLOW_HOME;
+  if (process.env.AIGF_HOME) return process.env.AIGF_HOME;
   if (process.platform === 'win32') {
-    return path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'aiflow');
+    return path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'ai-git-flow');
   }
-  return path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'aiflow');
+  return path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'ai-git-flow');
 }
 
 export const certsDir = () => path.join(configDir(), 'certs');

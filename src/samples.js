@@ -1,4 +1,4 @@
-// Fixed inputs for `aiflow doctor`. They are small on purpose: a calibration run costs about 3 000 tokens.
+// Fixed inputs for `aigf doctor`. They are small on purpose: a calibration run costs about 3 000 tokens.
 
 export const SAMPLES = {
   codeGroup: { key: 'code:src/utils', category: 'code', scope: 'utils', files: ['src/utils/math.js'], paths: ['src/utils/math.js'], message: null },

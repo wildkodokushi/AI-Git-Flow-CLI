@@ -62,6 +62,8 @@ export function request({ url, method = 'POST', headers = {}, body, timeoutMs = 
       method,
       headers: { ...headers, ...(payload ? { 'Content-Length': payload.length } : {}) },
       timeout: timeoutMs,
+      // `localhost` may resolve to ::1 first while a local server (Ollama) listens on IPv4 only.
+      autoSelectFamily: true,
     };
     if (secure) {
       if (ca && ca.length > 0) options.ca = [...tls.rootCertificates, ...ca];

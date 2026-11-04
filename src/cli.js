@@ -64,7 +64,7 @@ export function parseCli(argv) {
   try {
     parsed = parseArgs({ args: argv, options: OPTIONS, allowPositionals: true, strict: true });
   } catch (error) {
-    throw new UserError(`${error.message} Справка: aiflow help`);
+    throw new UserError(`${error.message} Справка: aigf help`);
   }
   const flags = {};
   for (const [name, value] of Object.entries(parsed.values)) flags[camel(name)] = value;
@@ -79,7 +79,7 @@ export function version() {
 export function helpText() {
   return `AI Git Flow ${version()}: Git-ассистент на основе языковых моделей
 
-Использование: aiflow [команда] [параметры]
+Использование: aigf [команда] [параметры]
 
 Команды
   commit (по умолчанию)  ветка, коммиты по группам, push и pull request
@@ -129,7 +129,7 @@ export async function main(argv) {
 
   const command = first ?? 'commit';
   const handler = HANDLERS[command];
-  if (!handler) throw new UserError(`Неизвестная команда "${command}". Справка: aiflow help`);
+  if (!handler) throw new UserError(`Неизвестная команда "${command}". Справка: aigf help`);
 
   const config = loadConfig();
   const opts = resolveOptions(flags, config);

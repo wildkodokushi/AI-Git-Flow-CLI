@@ -7,7 +7,7 @@ import { HttpError, request } from './http.js';
 /**
  * Built-in provider presets. Everything except GigaChat speaks the OpenAI-compatible
  * /chat/completions protocol. Model names are only suggested where they are stable;
- * otherwise `aiflow init` lists the models offered by the provider.
+ * otherwise `aigf init` lists the models offered by the provider.
  */
 export const PRESETS = {
   gigachat: {
@@ -74,12 +74,12 @@ export function resolveProvider(config, name) {
   const preset = PRESETS[name];
   const custom = config.providers[name];
   if (!preset && !custom) {
-    throw new UserError(`Неизвестный провайдер "${name}". Список провайдеров: aiflow provider list`);
+    throw new UserError(`Неизвестный провайдер "${name}". Список провайдеров: aigf provider list`);
   }
   const merged = { type: 'openai', needsKey: true, ...preset, ...custom, name };
   merged.models = { ...(preset?.models ?? {}), ...(custom?.models ?? {}) };
   if (!merged.keyEnv && merged.needsKey) {
-    merged.keyEnv = `AIFLOW_${name.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_KEY`;
+    merged.keyEnv = `AIGF_${name.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_KEY`;
   }
   return merged;
 }
@@ -198,7 +198,7 @@ export class OpenAIProvider {
       break;
     }
     throw new UserError(
-      `Модель ${model} вернула пустой ответ. Для aiflow подходят обычные (не «рассуждающие») модели. Выберите другую: aiflow provider models`,
+      `Модель ${model} вернула пустой ответ. Для aigf подходят обычные (не «рассуждающие») модели. Выберите другую: aigf provider models`,
     );
   }
 }
@@ -249,7 +249,7 @@ export function createProvider(settings, { insecure = false } = {}) {
   const key = getApiKey(settings);
   if (settings.needsKey && !key) {
     throw new UserError(
-      `Не найден ключ для провайдера ${settings.name}. Выполните: aiflow provider key ${settings.name} (или задайте переменную ${settings.keyEnv}).`,
+      `Не найден ключ для провайдера ${settings.name}. Выполните: aigf provider key ${settings.name} (или задайте переменную ${settings.keyEnv}).`,
     );
   }
   const Provider = settings.type === 'gigachat' ? GigaChatProvider : OpenAIProvider;

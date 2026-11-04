@@ -28,7 +28,7 @@ export function isValidCertificate(pem) {
   }
 }
 
-/** Certificates from the aiflow config folder plus NODE_EXTRA_CA_CERTS (which Node ignores once `ca` is set). */
+/** Certificates from the aigf config folder plus NODE_EXTRA_CA_CERTS (which Node ignores once `ca` is set). */
 export function loadExtraCa() {
   const result = [];
   const readInto = (file) => {

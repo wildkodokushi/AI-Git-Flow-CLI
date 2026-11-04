@@ -27,6 +27,9 @@ jobs:
             exit 1
           fi
 
+      # Trusted publishing (OIDC) needs a recent npm CLI.
+      - run: npm install -g npm@11
+
       - run: npm test
 
       - name: Pack and checksum

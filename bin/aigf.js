@@ -7,7 +7,7 @@ main(process.argv.slice(2)).then(
   },
   (error) => {
     process.stderr.write(`\n[ERROR] ${error && error.message ? error.message : error}\n`);
-    if (process.env.AIFLOW_DEBUG && error && error.stack) process.stderr.write(`${error.stack}\n`);
+    if (process.env.AIGF_DEBUG && error && error.stack) process.stderr.write(`${error.stack}\n`);
     process.exitCode = 1;
   },
 );

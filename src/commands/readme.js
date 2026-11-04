@@ -47,6 +47,6 @@ export async function readmeCommand(opts, config) {
   }
   fs.writeFileSync(target, text, 'utf8');
   ui.ok('Файл README.md создан.');
-  ui.info('Проверьте текст и при необходимости отредактируйте, затем выполните: aiflow');
+  ui.info('Проверьте текст и при необходимости отредактируйте, затем выполните: aigf');
   return 0;
 }

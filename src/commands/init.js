@@ -51,9 +51,9 @@ export async function initCommand(opts, config) {
   ui.banner('Мастер настройки');
 
   ui.section('1. Окружение');
-  const [major, minor] = process.versions.node.split('.').map(Number);
-  if (major > 18 || (major === 18 && minor >= 17)) ui.ok(`Node.js ${process.versions.node}`);
-  else ui.warn(`Node.js ${process.versions.node}: рекомендуется 18.17 или новее.`);
+  const major = Number(process.versions.node.split('.')[0]);
+  if (major >= 20) ui.ok(`Node.js ${process.versions.node}`);
+  else ui.warn(`Node.js ${process.versions.node}: нужна версия 20 или новее.`);
   if (hasCommand('git')) ui.ok(gitVersion());
   else ui.warn('Git не найден в PATH: установите его с https://git-scm.com');
   const gh = ghStatus();
@@ -165,9 +165,9 @@ export async function initCommand(opts, config) {
   }
 
   ui.section('Готово');
-  ui.print('  aiflow -h             справка');
-  ui.print('  aiflow --dry-run      показать план коммитов, ничего не меняя');
-  ui.print('  aiflow                ветка, коммиты, push и pull request');
-  ui.print('  aiflow doctor         повторная диагностика');
+  ui.print('  aigf -h             справка');
+  ui.print('  aigf --dry-run      показать план коммитов, ничего не меняя');
+  ui.print('  aigf                ветка, коммиты, push и pull request');
+  ui.print('  aigf doctor         повторная диагностика');
   return 0;
 }

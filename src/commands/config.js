@@ -38,7 +38,7 @@ export async function configCommand(opts, config, rest) {
       ui.print(JSON.stringify({ ...BUILTIN_DEFAULTS, ...config.defaults }, null, 2));
       return 0;
     case 'set': {
-      if (!key || value === undefined) throw new UserError(`Использование: aiflow config set <ключ> <значение>. Ключи: ${Object.keys(COERCE).join(', ')}`);
+      if (!key || value === undefined) throw new UserError(`Использование: aigf config set <ключ> <значение>. Ключи: ${Object.keys(COERCE).join(', ')}`);
       if (!COERCE[key]) throw new UserError(`Неизвестный ключ "${key}". Доступно: ${Object.keys(COERCE).join(', ')}`);
       config.defaults = { ...config.defaults, [key]: COERCE[key](value) };
       saveConfig(config);
@@ -46,7 +46,7 @@ export async function configCommand(opts, config, rest) {
       return 0;
     }
     case 'unset': {
-      if (!key) throw new UserError('Использование: aiflow config unset <ключ>');
+      if (!key) throw new UserError('Использование: aigf config unset <ключ>');
       const { [key]: removed, ...rest2 } = config.defaults;
       config.defaults = rest2;
       saveConfig(config);

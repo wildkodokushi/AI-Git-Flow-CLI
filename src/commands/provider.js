@@ -15,7 +15,7 @@ function listProviders(config) {
     ui.print(`${active} ${ui.c.white(name.padEnd(12))} ${ui.c.gray(key.padEnd(14))} ${ui.c.gray(models)}`);
   }
   ui.print('');
-  ui.info('* активный провайдер. Сменить: aiflow provider use <имя>. Добавить свой: aiflow provider add <имя> --base-url <url>');
+  ui.info('* активный провайдер. Сменить: aigf provider use <имя>. Добавить свой: aigf provider add <имя> --base-url <url>');
 }
 
 export async function providerCommand(opts, config, rest) {
@@ -28,7 +28,7 @@ export async function providerCommand(opts, config, rest) {
       return 0;
 
     case 'use': {
-      if (!name) throw new UserError('Укажите имя провайдера: aiflow provider use <имя>');
+      if (!name) throw new UserError('Укажите имя провайдера: aigf provider use <имя>');
       resolveProvider(config, name);
       config.provider = name;
       saveConfig(config);
@@ -37,11 +37,11 @@ export async function providerCommand(opts, config, rest) {
     }
 
     case 'add':
-      if (!name) throw new UserError('Укажите имя провайдера: aiflow provider add <имя> --base-url <url>');
+      if (!name) throw new UserError('Укажите имя провайдера: aigf provider add <имя> --base-url <url>');
       return initCommand({ ...opts, provider: name }, config);
 
     case 'key': {
-      if (!target) throw new UserError('Провайдер не выбран. Выполните: aiflow init');
+      if (!target) throw new UserError('Провайдер не выбран. Выполните: aigf init');
       const settings = resolveProvider(config, target);
       if (!settings.needsKey) {
         ui.info(`Провайдеру ${target} ключ не нужен.`);
@@ -56,7 +56,7 @@ export async function providerCommand(opts, config, rest) {
     }
 
     case 'remove': {
-      if (!name) throw new UserError('Укажите имя провайдера: aiflow provider remove <имя>');
+      if (!name) throw new UserError('Укажите имя провайдера: aigf provider remove <имя>');
       if (PRESETS[name]) {
         delete config.providers[name];
         removeCredential(name);
@@ -74,13 +74,13 @@ export async function providerCommand(opts, config, rest) {
     }
 
     case 'models': {
-      if (!target) throw new UserError('Провайдер не выбран. Выполните: aiflow init');
+      if (!target) throw new UserError('Провайдер не выбран. Выполните: aigf init');
       const settings = resolveProvider(config, target);
       try {
         const provider = createProvider(settings, { insecure: opts.insecure });
         await provider.ready();
         const list = await provider.listModels();
-        if (!list) ui.warn('Провайдер не поддерживает список моделей. Укажите имя модели вручную в aiflow init.');
+        if (!list) ui.warn('Провайдер не поддерживает список моделей. Укажите имя модели вручную в aigf init.');
         else list.forEach((id) => ui.print(id));
       } catch (error) {
         throw describeError(error);

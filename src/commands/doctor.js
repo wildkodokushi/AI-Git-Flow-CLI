@@ -84,7 +84,7 @@ export function printCalibration(results, models) {
   const { small, large } = verdict(results);
   ui.print('');
   if (small) ui.ok(`Модель ${models.small} подходит для тем коммитов.`);
-  else ui.warn(`Модель ${models.small} плохо справляется с темами коммитов. Выберите более сильную: aiflow init`);
+  else ui.warn(`Модель ${models.small} плохо справляется с темами коммитов. Выберите более сильную: aigf init`);
   if (large) ui.ok(`Модель ${models.large} подходит для README, PR и issue.`);
   else ui.warn(`Модель ${models.large} не справилась с длинными текстами. Для README, PR и issue нужна модель сильнее.`);
 }
@@ -94,10 +94,10 @@ export async function doctorCommand(opts, config) {
   let failures = 0;
 
   ui.section('Окружение');
-  const [major, minor] = process.versions.node.split('.').map(Number);
-  if (major > 18 || (major === 18 && minor >= 17)) ui.ok(`Node.js ${process.versions.node}`);
+  const major = Number(process.versions.node.split('.')[0]);
+  if (major >= 20) ui.ok(`Node.js ${process.versions.node}`);
   else {
-    ui.warn(`Node.js ${process.versions.node}: нужна версия 18.17 или новее.`);
+    ui.warn(`Node.js ${process.versions.node}: нужна версия 20 или новее.`);
     failures += 1;
   }
   const version = hasCommand('git') ? gitVersion() : null;

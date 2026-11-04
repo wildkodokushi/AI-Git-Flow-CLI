@@ -6,7 +6,7 @@ import { GigaChatProvider, OpenAIProvider, resolveProvider } from '../src/provid
 import { UserError } from '../src/errors.js';
 import { startMockLlm } from './helpers.js';
 
-process.env.AIFLOW_RETRY_DELAY_MS = '0';
+process.env.AIGF_RETRY_DELAY_MS = '0';
 
 let mock;
 let behaviour = () => 'hello';
@@ -105,7 +105,7 @@ test('Llm retries on 5xx and 429 but reports other errors in plain language', as
 });
 
 test('describeError gives actionable messages', () => {
-  assert.match(describeError(new TlsError('x', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE')).message, /aiflow init/);
+  assert.match(describeError(new TlsError('x', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE')).message, /aigf init/);
   assert.match(describeError(new NetworkError('boom', 'ECONNREFUSED')).message, /ECONNREFUSED/);
   assert.match(describeError(new HttpError(402, '')).message, /402/);
   assert.match(describeError(new HttpError(429, '')).message, /лимит/);
@@ -124,7 +124,7 @@ test('resolveProvider merges presets with user overrides', () => {
   assert.equal(giga.type, 'gigachat');
   assert.deepEqual(giga.models, { small: 'GigaChat-2', large: 'GigaChat-2-Max' });
   const mine = resolveProvider(config, 'mine');
-  assert.equal(mine.keyEnv, 'AIFLOW_MINE_KEY');
+  assert.equal(mine.keyEnv, 'AIGF_MINE_KEY');
   assert.equal(mine.type, 'openai');
   assert.throws(() => resolveProvider(config, 'nope'), UserError);
 });

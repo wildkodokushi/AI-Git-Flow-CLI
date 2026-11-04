@@ -5,8 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const BIN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'aiflow.js');
-export const tmp = (prefix = 'aiflow-') => fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+export const BIN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'aigf.js');
+export const tmp = (prefix = 'aigf-') => fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 
 /** Default behaviour of the fake model: deliberately sloppy (past tense, capital letters) like real models. */
 export function defaultAnswer(prompt) {
@@ -85,7 +85,7 @@ export { git };
 
 /** Creates a repository with an initial commit and a bare "origin" next to it. */
 export function makeRepo(initialFiles = { 'README.md': '# demo\n' }, { withRemote = true } = {}) {
-  const base = tmp('aiflow-repo-');
+  const base = tmp('aigf-repo-');
   const dir = path.join(base, 'work');
   fs.mkdirSync(dir);
   git(dir, 'init', '-q', '-b', 'main');
@@ -115,7 +115,7 @@ export function writeFiles(dir, files) {
 
 /** A fake `gh` that records arguments and bodies, so PR and issue creation can be verified. */
 export function makeFakeGh() {
-  const dir = tmp('aiflow-gh-');
+  const dir = tmp('aigf-gh-');
   const script = `#!/bin/sh
 echo "$@" >> "${dir}/log"
 case "$1" in
@@ -144,8 +144,8 @@ export function runCli(args, { cwd, home, input = '', env = {}, gh } = {}) {
       cwd,
       env: {
         ...process.env,
-        AIFLOW_HOME: home,
-        AIFLOW_RETRY_DELAY_MS: '0',
+        AIGF_HOME: home,
+        AIGF_RETRY_DELAY_MS: '0',
         NO_COLOR: '1',
         PATH: pathParts.join(path.delimiter),
         ...env,

@@ -10,7 +10,7 @@ import { GigaChatProvider } from '../src/providers.js';
 import { runCli, tmp, writeFiles, makeRepo } from './helpers.js';
 
 // A private CA, like the Russian Ministry of Digital Development CA that signs GigaChat servers.
-const dir = tmp('aiflow-tls-');
+const dir = tmp('aigf-tls-');
 let server;
 let port;
 let opensslOk = true;
@@ -44,7 +44,7 @@ after(() => server?.close());
 const skip = () => !opensslOk && 'openssl is not available';
 
 test('an unknown CA is rejected with a TlsError, a trusted one is accepted', { skip: skip() }, async () => {
-  const url = `https://localhost:${port}/x`;
+  const url = `https://127.0.0.1:${port}/x`;
   await assert.rejects(() => request({ url, method: 'GET' }), TlsError);
   const response = await request({ url, method: 'GET', ca: [fs.readFileSync(path.join(dir, 'ca.pem'), 'utf8')] });
   assert.equal(response.status, 200);
@@ -58,35 +58,35 @@ test('DER and PEM certificates are both understood', { skip: skip() }, () => {
   assert.equal(isValidCertificate(derToPem(der)), true);
   assert.equal(isValidCertificate('-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----'), false);
 
-  const home = tmp('aiflow-home-');
+  const home = tmp('aigf-home-');
   fs.mkdirSync(path.join(home, 'certs'));
   fs.copyFileSync(path.join(dir, 'ca.der'), path.join(home, 'certs', 'root.cer'));
   fs.writeFileSync(path.join(home, 'certs', 'broken.pem'), 'garbage');
   const savedExtra = process.env.NODE_EXTRA_CA_CERTS;
   delete process.env.NODE_EXTRA_CA_CERTS; // the host may define its own
-  process.env.AIFLOW_HOME = home;
+  process.env.AIGF_HOME = home;
   try {
     assert.equal(loadExtraCa().length, 1);
   } finally {
-    delete process.env.AIFLOW_HOME;
+    delete process.env.AIGF_HOME;
     if (savedExtra !== undefined) process.env.NODE_EXTRA_CA_CERTS = savedExtra;
   }
   assert.ok(pem.includes('BEGIN CERTIFICATE'));
 });
 
 test('GigaChatProvider works over TLS with a certificate from the config folder', { skip: skip() }, async () => {
-  const home = tmp('aiflow-home-');
+  const home = tmp('aigf-home-');
   fs.mkdirSync(path.join(home, 'certs'));
   fs.copyFileSync(path.join(dir, 'ca.der'), path.join(home, 'certs', 'russian_trusted_root_ca.cer'));
-  const settings = { name: 'gigachat', baseUrl: `https://localhost:${port}/api/v1`, authUrl: `https://localhost:${port}/api/v2/oauth`, extraCa: true };
+  const settings = { name: 'gigachat', baseUrl: `https://127.0.0.1:${port}/api/v1`, authUrl: `https://127.0.0.1:${port}/api/v2/oauth`, extraCa: true };
 
-  process.env.AIFLOW_HOME = home;
+  process.env.AIGF_HOME = home;
   try {
     const provider = new GigaChatProvider(settings, 'KEY', {});
     const { text } = await provider.chat({ system: 's', user: 'u', model: 'GigaChat-2', maxTokens: 10 });
     assert.equal(text, 'secure hello');
   } finally {
-    delete process.env.AIFLOW_HOME;
+    delete process.env.AIGF_HOME;
   }
 
   const bare = new GigaChatProvider({ ...settings, extraCa: false }, 'KEY', {});
@@ -94,32 +94,32 @@ test('GigaChatProvider works over TLS with a certificate from the config folder'
 });
 
 test('NODE_EXTRA_CA_CERTS is honoured', { skip: skip() }, async () => {
-  const settings = { name: 'gigachat', baseUrl: `https://localhost:${port}/api/v1`, authUrl: `https://localhost:${port}/api/v2/oauth`, extraCa: true };
+  const settings = { name: 'gigachat', baseUrl: `https://127.0.0.1:${port}/api/v1`, authUrl: `https://127.0.0.1:${port}/api/v2/oauth`, extraCa: true };
   process.env.NODE_EXTRA_CA_CERTS = path.join(dir, 'ca.pem');
-  process.env.AIFLOW_HOME = tmp('aiflow-home-');
+  process.env.AIGF_HOME = tmp('aigf-home-');
   try {
     const provider = new GigaChatProvider(settings, 'KEY', {});
     assert.equal(await provider.ready(), true);
   } finally {
     delete process.env.NODE_EXTRA_CA_CERTS;
-    delete process.env.AIFLOW_HOME;
+    delete process.env.AIGF_HOME;
   }
 });
 
 test('the CLI explains a certificate problem and how to fix it', { skip: skip() }, async () => {
   const repo = makeRepo();
   writeFiles(repo.dir, { 'style.css': 'a {}\n' });
-  const home = tmp('aiflow-home-');
+  const home = tmp('aigf-home-');
   fs.writeFileSync(
     path.join(home, 'config.json'),
     JSON.stringify({
       provider: 'gigachat',
-      providers: { gigachat: { baseUrl: `https://localhost:${port}/api/v1`, authUrl: `https://localhost:${port}/api/v2/oauth` } },
+      providers: { gigachat: { baseUrl: `https://127.0.0.1:${port}/api/v1`, authUrl: `https://127.0.0.1:${port}/api/v2/oauth` } },
       defaults: {},
     }),
   );
   const result = await runCli(['--dry-run'], { cwd: repo.dir, home, env: { GIGACHAT_AUTH_KEY: 'KEY' } });
   assert.equal(result.code, 1);
   assert.match(result.output, /TLS-сертификат/);
-  assert.match(result.output, /aiflow init/);
+  assert.match(result.output, /aigf init/);
 });

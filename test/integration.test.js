@@ -14,7 +14,7 @@ after(() => mock.close());
 
 const setup = (files, options) => {
   const repo = makeRepo(undefined, options);
-  const home = tmp('aiflow-home-');
+  const home = tmp('aigf-home-');
   writeConfig(home, mock);
   writeFiles(repo.dir, files);
   return { ...repo, home };
@@ -133,7 +133,7 @@ test('commit: falls back to template messages when the model is unavailable', as
   const broken = await startMockLlm(() => ({ status: 500, body: { error: 'down' } }));
   try {
     const repo = makeRepo();
-    const home = tmp('aiflow-home-');
+    const home = tmp('aigf-home-');
     writeConfig(home, broken);
     writeFiles(repo.dir, { 'style.css': 'd {}\n', 'src/lib/util.js': 'export {};\n' });
     const result = await runCli(['--branch', 'feat/fallback', '--yes', '--no-pr'], { cwd: repo.dir, home });
@@ -156,9 +156,9 @@ test('commit: a failing hook aborts with a clear message', async () => {
 
 test('commit without a configured provider explains how to fix it', async () => {
   const ctx = setup({ 'style.css': 'f {}\n' });
-  const result = await runCli(['--yes'], { cwd: ctx.dir, home: tmp('aiflow-empty-') });
+  const result = await runCli(['--yes'], { cwd: ctx.dir, home: tmp('aigf-empty-') });
   assert.equal(result.code, 1);
-  assert.match(result.output, /aiflow init/);
+  assert.match(result.output, /aigf init/);
 });
 
 test('license: writes LICENSE, honours dry-run and asks before overwriting', async () => {
@@ -245,7 +245,7 @@ test('doctor: a capable model passes calibration, a sloppy one is flagged', asyn
 
   const lazy = await startMockLlm(() => 'ok');
   try {
-    const home = tmp('aiflow-home-');
+    const home = tmp('aigf-home-');
     writeConfig(home, lazy);
     const bad = await runCli(['doctor'], { cwd: ctx.dir, home });
     assert.equal(bad.code, 0);
@@ -266,10 +266,10 @@ test('doctor --quick only checks connectivity', async () => {
 });
 
 test('init --yes configures a custom OpenAI-compatible provider non-interactively', async () => {
-  const home = tmp('aiflow-home-');
+  const home = tmp('aigf-home-');
   const result = await runCli(
     ['init', '--provider', 'mycloud', '--base-url', `${mock.url}/v1`, '--small-model', 'tiny', '--large-model', 'big', '--lang', 'ru', '--yes', '--quick'],
-    { home, env: { AIFLOW_MYCLOUD_KEY: 'secret' } },
+    { home, env: { AIGF_MYCLOUD_KEY: 'secret' } },
   );
   assert.equal(result.code, 0, result.output);
   const config = JSON.parse(fs.readFileSync(path.join(home, 'config.json'), 'utf8'));
@@ -281,7 +281,7 @@ test('init --yes configures a custom OpenAI-compatible provider non-interactivel
 });
 
 test('init --yes sets up GigaChat against a mock OAuth server and runs calibration', async () => {
-  const home = tmp('aiflow-home-');
+  const home = tmp('aigf-home-');
   const before = mock.requests.length;
   const result = await runCli(
     ['init', '--provider', 'gigachat', '--base-url', `${mock.url}/api/v1`, '--auth-url', `${mock.url}/api/v2/oauth`, '--yes'],
@@ -299,7 +299,7 @@ test('init --yes sets up GigaChat against a mock OAuth server and runs calibrati
 });
 
 test('init: the interactive wizard can add a custom provider and pick models from the list', async () => {
-  const home = tmp('aiflow-home-');
+  const home = tmp('aigf-home-');
   const input = ['8', 'myserver', `${mock.url}/v1`, 'n', '1', '', 'ru', 'n', ''].join('\n');
   const result = await runCli(['init'], { home, input });
   assert.equal(result.code, 0, result.output);
@@ -341,7 +341,7 @@ test('provider and config commands manage settings', async () => {
 });
 
 test('cli: version, help and unknown commands', async () => {
-  const home = tmp('aiflow-home-');
+  const home = tmp('aigf-home-');
   const version = await runCli(['--version'], { home });
   assert.match(version.stdout.trim(), /^\d+\.\d+\.\d+$/);
   const help = await runCli(['help'], { home });

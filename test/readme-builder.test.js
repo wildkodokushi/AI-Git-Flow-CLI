@@ -17,7 +17,7 @@ test('formatTree renders two levels and skips lock files', () => {
 });
 
 test('projectInfo detects stack and commands from package.json', () => {
-  const root = tmp('aiflow-pkg-');
+  const root = tmp('aigf-pkg-');
   writeFiles(root, {
     'package.json': JSON.stringify({
       description: 'A demo site',
@@ -46,7 +46,7 @@ test('sanitizeRemote strips credentials', () => {
 });
 
 test('excerpts never read env files', () => {
-  const root = tmp('aiflow-ex-');
+  const root = tmp('aigf-ex-');
   writeFiles(root, { 'index.html': '<h1>hi</h1>', '.env': 'SECRET=1', 'src/main.js': 'console.log(1)' });
   const text = excerpts(root, ['index.html', '.env', 'src/main.js']);
   assert.match(text, /index\.html/);
@@ -54,7 +54,7 @@ test('excerpts never read env files', () => {
 });
 
 test('buildReadme assembles sections in the requested language', () => {
-  const root = tmp('aiflow-rd-');
+  const root = tmp('aigf-rd-');
   writeFiles(root, { LICENSE: 'MIT License\n\nCopyright' });
   const info = { name: 'demo', description: null, stack: ['React'], prereqs: ['Node.js (LTS)'], install: ['npm install'], usage: [{ labelKey: 'Dev', command: 'npm run dev' }] };
   const text = buildReadme({

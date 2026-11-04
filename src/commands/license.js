@@ -41,6 +41,6 @@ export async function licenseCommand(opts) {
   }
   fs.writeFileSync(path.join(root, target), text, 'utf8');
   ui.ok(`Файл ${target} создан: лицензия ${key}, правообладатель ${holder.trim()}, год ${opts.year}`);
-  ui.info('Закоммитить и отправить файл можно командой: aiflow');
+  ui.info('Закоммитить и отправить файл можно командой: aigf');
   return 0;
 }

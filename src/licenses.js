@@ -159,7 +159,7 @@ async function fetchFromGitHub(key, { insecure } = {}) {
     response = await request({
       url: `https://api.github.com/licenses/${key}`,
       method: 'GET',
-      headers: { 'User-Agent': 'aiflow', Accept: 'application/vnd.github+json' },
+      headers: { 'User-Agent': 'aigf', Accept: 'application/vnd.github+json' },
       timeoutMs: 30000,
       insecure,
     });

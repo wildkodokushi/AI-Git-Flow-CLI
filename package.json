@@ -1,10 +1,11 @@
 {
-  "name": "aiflow-cli",
+  "name": "ai-git-flow",
   "version": "2.0.0",
-  "description": "AI-powered Git assistant: grouped Conventional Commits, branches, pull requests, README, LICENSE and issues with any OpenAI-compatible model or GigaChat.",
+  "description": "AI-powered Git assistant: grouped Conventional Commits, branches, pull requests, README, LICENSE and issues with GigaChat or any OpenAI-compatible model.",
   "type": "module",
   "bin": {
-    "aiflow": "bin/aiflow.js"
+    "aigf": "bin/aigf.js",
+    "ai-git-flow": "bin/aigf.js"
   },
   "files": [
     "bin",
@@ -13,10 +14,18 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=18.17"
+    "node": ">=20"
   },
   "scripts": {
     "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wildkodokushi/AI-Git-Flow-CLI.git"
+  },
+  "homepage": "https://github.com/wildkodokushi/AI-Git-Flow-CLI#readme",
+  "bugs": {
+    "url": "https://github.com/wildkodokushi/AI-Git-Flow-CLI/issues"
   },
   "keywords": [
     "git",

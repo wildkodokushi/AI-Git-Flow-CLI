@@ -4,6 +4,8 @@
 
 Работает в Windows, macOS и Linux. Подключается к GigaChat и к любому OpenAI-совместимому API (DeepSeek, Grok, OpenRouter, Groq, OpenAI, локальный Ollama и другие).
 
+![Демонстрация aigf](docs/aigf-demo.gif)
+
 ```bash
 npx ai-git-flow init     # один раз: выбрать провайдера, ввести ключ, проверить модель
 aigf                     # дальше: ветка, коммиты, push и pull request одной командой

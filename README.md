@@ -1,19 +1,33 @@
-# AI Git Flow CLI
+<p align="center">
+  <img src="docs/logo.svg" width="120" alt="AI Git Flow logo">
+</p>
 
-Консольный Git-ассистент на языковых моделях. Раскладывает изменения по логичным коммитам в формате [Conventional Commits](https://www.conventionalcommits.org/), создаёт ветку, отправляет её на сервер и открывает pull request. Умеет также генерировать `README.md`, файл `LICENSE` и issue на GitHub.
+<h1 align="center">AI Git Flow CLI</h1>
 
-Работает в Windows, macOS и Linux. Подключается к GigaChat и к любому OpenAI-совместимому API (DeepSeek, Grok, OpenRouter, Groq, OpenAI, локальный Ollama и другие).
+<p align="center">
+  Git-ассистент на языковых моделях: коммиты по группам, ветки, pull request, README, LICENSE и issue
+</p>
 
-![Демонстрация aigf](docs/aigf-demo.gif)
+<p align="center">
+  <a href="https://www.npmjs.com/package/ai-git-flow"><img src="https://img.shields.io/npm/v/ai-git-flow?style=flat-square&label=%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F&color=cb3837" alt="npm версия"></a>
+  <a href="https://www.npmjs.com/package/ai-git-flow"><img src="https://img.shields.io/npm/dm/ai-git-flow?style=flat-square&label=%D1%81%D0%BA%D0%B0%D1%87%D0%B8%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F&color=3fb950" alt="скачивания в месяц"></a>
+  <a href="https://github.com/wildkodokushi/AI-Git-Flow-CLI/actions/workflows/ci.yml"><img src="https://github.com/wildkodokushi/AI-Git-Flow-CLI/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/node/v/ai-git-flow?style=flat-square&label=node&color=339933" alt="Node.js">
+  <img src="https://img.shields.io/badge/%D0%BF%D0%BB%D0%B0%D1%82%D1%84%D0%BE%D1%80%D0%BC%D1%8B-Windows%20%7C%20macOS%20%7C%20Linux-555?style=flat-square" alt="Платформы">
+  <img src="https://img.shields.io/badge/%D0%BF%D1%80%D0%BE%D0%B2%D0%B0%D0%B9%D0%B4%D0%B5%D1%80%D1%8B-GigaChat%20%7C%20OpenAI--compatible-555?style=flat-square" alt="Провайдеры">
+  <img src="https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-blue?style=flat-square" alt="Лицензия MIT">
+</p>
+
+<p align="center">
+  <img src="docs/aigf-demo.gif" width="720" alt="Демонстрация aigf">
+</p>
 
 ```bash
-npx ai-git-flow init     # один раз: выбрать провайдера, ввести ключ, проверить модель
-aigf                     # дальше: ветка, коммиты, push и pull request одной командой
+npx ai-git-flow init    # настройка: провайдер, ключ, проверка модели
+aigf                    # ветка, коммиты, push и pull request
 ```
 
-Пакет называется `ai-git-flow`. После установки доступны две одинаковые команды: короткая `aigf` и полная `ai-git-flow`. В примерах ниже используется `aigf`.
-
-> Это кроссплатформенная версия на Node.js. Первая версия для Windows PowerShell лежит в репозитории [AI-Git-Flow](https://github.com/wildkodokushi/AI-Git-Flow). Команды версий различаются (`aiflow` у PowerShell-версии, `aigf` здесь), поэтому их можно держать на одном компьютере одновременно.
+> Версия для Windows на PowerShell: [AI-Git-Flow](https://github.com/wildkodokushi/AI-Git-Flow). Команда там `aiflow`, поэтому обе версии уживаются на одном компьютере.
 
 ## Содержание
 

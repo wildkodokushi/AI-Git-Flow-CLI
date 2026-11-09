@@ -33,33 +33,79 @@ export function commitPrompt(group, context, lang) {
 // Pull request
 // ---------------------------------------------------------------------------
 
-export function prPrompt(subjects, stat, lang) {
+/**
+ * Concise mode asks for a title and a list of changes. Deep mode also gets the diff and asks
+ * for manual checks and notes for the reviewer.
+ */
+export function prPrompt({ lang, subjects, stat, patch, deep }) {
+  const layout = [
+    'TITLE: <pull request title in Conventional Commits style, at most 70 characters, no trailing period>',
+    'DONE:',
+    '- <what changed, one short sentence per item, 3 to 6 items>',
+  ];
+  if (deep) {
+    layout.push(
+      'CHECKS:',
+      '- <a concrete manual check a reviewer can run, based only on these changes, 2 to 4 items>',
+      'NOTES:',
+      '- <risks, breaking changes or follow-up work; write "none" if there are none>',
+    );
+  }
+  const rules = [
+    'Plain text only: no markdown headings, no code fences, no commentary before or after the layout.',
+    'Describe only what is visible in the input. Do not invent features, tests or results that are not in the diff.',
+    `Language of every item: ${langName(lang)}.`,
+  ];
+  if (deep) rules.push('Name concrete files or functions in DONE and CHECKS items when that helps the reviewer.');
   return {
-    system: 'You write concise, factual pull request descriptions for software engineers. Follow the requested output format exactly.',
+    system: 'You write precise, factual pull request descriptions for software engineers. Follow the requested layout exactly.',
     user: [
-      'Write a pull request title and summary for the commits and diff summary below.',
-      'Output format, plain text without markdown:',
-      'Line 1: the pull request title in Conventional Commits style, at most 70 characters, no trailing period.',
-      'Line 2 and onward: a summary of 2 to 4 sentences describing what changed and why it matters.',
-      `Language of the summary: ${langName(lang)}.`,
-      'Do not invent details that are not visible in the input.',
+      'Write the pull request text for the changes below.',
+      'Layout:',
+      ...layout,
+      'Rules:',
+      ...rules,
       '',
       'Commits:',
       ...subjects.map((s) => `- ${s}`),
       '',
       'Diff summary:',
       stat,
+      ...(patch ? ['', 'Diff:', patch] : []),
     ].join('\n'),
   };
 }
 
+const PR_KEYWORDS = /^(TITLE|DONE|CHECKS|NOTES)\s*:\s*(.*)$/i;
+const NONE = /^(none|нет)\.?$/i;
+
 export function parsePr(answer, lang) {
-  const lines = String(answer ?? '').split(/\r?\n/).filter((l) => l.trim());
-  if (lines.length === 0) return { title: null, summary: '' };
-  let title = toSubject(lines[0].replace(/^(title|заголовок)\s*:\s*/i, ''), 72);
-  if (title) title = applyImperative(title, lang);
-  const summary = lines.slice(1).join('\n').trim().replace(/^(summary|описание)\s*:\s*/i, '');
-  return { title, summary };
+  const result = { title: null, done: [], checks: [], notes: [] };
+  let section = null;
+  for (const raw of String(answer ?? '').split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const keyword = PR_KEYWORDS.exec(line);
+    if (keyword) {
+      section = keyword[1].toUpperCase();
+      if (section === 'TITLE') result.title = keyword[2];
+      continue;
+    }
+    const bullet = /^(?:[-*]|\d+\.)\s+(.+)$/.exec(line);
+    if (bullet && section && section !== 'TITLE') {
+      const item = bullet[1].trim();
+      if (!NONE.test(item)) result[section.toLowerCase()].push(item);
+    }
+  }
+  if (!result.title) {
+    const firstLine = String(answer ?? '').split(/\r?\n/).find((l) => l.trim() && !PR_KEYWORDS.test(l.trim()));
+    result.title = firstLine ?? null;
+  }
+  result.title = result.title ? applyImperative(toSubject(result.title, 72) ?? '', lang) || null : null;
+  result.done = result.done.slice(0, 6);
+  result.checks = result.checks.slice(0, 4);
+  result.notes = result.notes.slice(0, 5);
+  return result;
 }
 
 // ---------------------------------------------------------------------------

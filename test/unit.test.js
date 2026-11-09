@@ -79,9 +79,12 @@ test('buildCommitMessage produces valid Conventional Commits lines', () => {
 });
 
 test('parsers extract structured data from model answers', () => {
-  const pr = parsePr('Title: Feat: added stuff\nSummary: Adds things.\nMore text.', 'en');
+  const pr = parsePr('TITLE: feat: added stuff\nDONE:\n- adds things\n- second change\nCHECKS:\n- open the page\nNOTES:\n- none', 'en');
   assert.equal(pr.title, 'feat: add stuff');
-  assert.match(pr.summary, /Adds things/);
+  assert.deepEqual(pr.done, ['adds things', 'second change']);
+  assert.deepEqual(pr.checks, ['open the page']);
+  assert.deepEqual(pr.notes, [], 'a literal "none" is not a note');
+  assert.equal(parsePr('feat: plain title\nDONE:\n- x', 'en').title, 'feat: plain title');
 
   const readme = parseReadme('DESCRIPTION: A site.\nFEATURES:\n- one\n* two\n3. three');
   assert.equal(readme.description, 'A site.');

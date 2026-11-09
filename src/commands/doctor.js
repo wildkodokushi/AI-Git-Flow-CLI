@@ -42,9 +42,9 @@ export async function runCalibration(llm, lang = 'en') {
   });
 
   await attempt('pull-request', 'large', async () => {
-    const prompt = prPrompt(SAMPLES.subjects, SAMPLES.stat, lang);
-    const { title, summary } = parsePr(await llm.ask({ ...prompt, tier: 'large', maxTokens: 400 }), lang);
-    if (title && summary.length >= 20) record('pull-request', 'large', 'pass', title);
+    const prompt = prPrompt({ lang, subjects: SAMPLES.subjects, stat: SAMPLES.stat, patch: null, deep: false });
+    const parsed = parsePr(await llm.ask({ ...prompt, tier: 'large', maxTokens: 400 }), lang);
+    if (parsed.title && parsed.done.length >= 2) record('pull-request', 'large', 'pass', parsed.title);
     else record('pull-request', 'large', 'fail', 'Нет заголовка или описания в ожидаемом формате.');
   });
 

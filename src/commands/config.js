@@ -18,6 +18,19 @@ const COERCE = {
     if (!Number.isInteger(n) || n < 2 || n > 10) throw new UserError('maxCodeGroups: целое число от 2 до 10.');
     return n;
   },
+  deepPr: (v) => {
+    if (!/^(true|false)$/i.test(v)) throw new UserError('deepPr принимает значения true или false.');
+    return v.toLowerCase() === 'true';
+  },
+  prMaxChars: (v) => {
+    const n = Number(v);
+    if (!Number.isInteger(n) || n < 2000 || n > 60000) throw new UserError('prMaxChars: целое число от 2000 до 60000.');
+    return n;
+  },
+  uiLang: (v) => {
+    if (v !== 'en' && v !== 'ru') throw new UserError('uiLang принимает значения en или ru.');
+    return v;
+  },
   maxDiffChars: (v) => {
     const n = Number(v);
     if (!Number.isInteger(n) || n < 500 || n > 20000) throw new UserError('maxDiffChars: целое число от 500 до 20000.');

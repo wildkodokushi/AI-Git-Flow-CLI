@@ -3,6 +3,7 @@ import {
   changedFiles, currentBranch, defaultBranch, enterRepository, git, gitChecked, refExists, remoteUrl,
 } from '../git.js';
 import { LOCK_FILE, buildPlan } from '../grouping.js';
+import { t } from '../i18n.js';
 import { createLlm } from '../llm.js';
 import { createPullRequest } from '../pr.js';
 import { commitPrompt } from '../prompts.js';
@@ -28,11 +29,11 @@ function groupContext(group, maxChars) {
 }
 
 function showPlan(plan) {
-  ui.section('План коммитов');
+  ui.section(t('commit.planTitle'));
   plan.forEach((group, index) => {
     ui.print(`${ui.c.gray(String(index + 1).padStart(2))}. ${ui.c.white(group.message)}`);
     for (const file of group.files.slice(0, 6)) ui.print(ui.c.gray(`      ${file}`));
-    if (group.files.length > 6) ui.print(ui.c.gray(`      ... и ещё ${group.files.length - 6}`));
+    if (group.files.length > 6) ui.print(ui.c.gray(`      ... +${group.files.length - 6}`));
   });
   ui.print('');
 }
@@ -43,18 +44,18 @@ async function resolveBranch(requested, current) {
   const interactive = requested === undefined;
   for (;;) {
     if (name === undefined || name === '') {
-      ui.print(ui.c.gray(`Текущая ветка: ${current}`));
-      name = await ui.ask('Имя новой ветки (например, feat/home-swiper). Напишите . чтобы остаться в текущей ветке:');
-      if (!name) throw new UserError('Имя ветки не указано. Операция отменена.');
+      ui.print(ui.c.gray(t('commit.currentBranch', { branch: current })));
+      name = await ui.ask(t('commit.branchPrompt'));
+      if (!name) throw new UserError(t('commit.branchMissing'));
     }
     name = name.trim();
     if (name === '.') return '.';
 
     const problem =
       git(['check-ref-format', '--branch', name]).code !== 0
-        ? `Недопустимое имя ветки: ${name}`
+        ? t('commit.invalidBranch', { name })
         : refExists(`refs/heads/${name}`)
-          ? `Ветка ${name} уже существует.`
+          ? t('commit.branchExists', { name })
           : null;
     if (!problem) return name;
     if (!interactive) throw new UserError(problem);
@@ -64,28 +65,28 @@ async function resolveBranch(requested, current) {
 }
 
 export async function commitCommand(opts, config) {
-  ui.banner('Ветка, коммиты и pull request');
+  ui.banner(t('banner.commit'));
   enterRepository();
 
-  ui.section('1. Анализ изменений');
+  ui.section(t('commit.section.analyse'));
   const changes = changedFiles();
   if (changes.length === 0) {
-    ui.ok('Нет изменений для коммита.');
+    ui.ok(t('commit.nothing'));
     return 0;
   }
-  ui.info(`Изменённых файлов: ${changes.length}`);
+  ui.info(t('commit.changedFiles', { count: changes.length }));
 
   const startBranch = currentBranch();
   const base = opts.base || defaultBranch(opts.remote, startBranch);
 
   const llm = createLlm(opts, config);
-  ui.info(`Провайдер: ${llm.name}, модель: ${llm.models.small}`);
+  ui.info(t('commit.provider', { name: llm.name, model: llm.models.small }));
   await llm.ready();
-  ui.ok('Подключение к модели установлено.');
+  ui.ok(t('commit.connected'));
 
-  ui.section('2. Формирование плана');
+  ui.section(t('commit.section.plan'));
   const plan = buildPlan(changes, opts.maxCodeGroups);
-  ui.info(`Групп: ${plan.length}`);
+  ui.info(t('commit.groups', { count: plan.length }));
 
   // The index is rebuilt per group during execution; here it only serves diff generation.
   gitChecked(['reset', '-q']);
@@ -93,14 +94,14 @@ export async function commitCommand(opts, config) {
   try {
     let number = 1;
     for (const group of plan) {
-      ui.info(`Сообщение ${number} из ${plan.length}: ${group.key}`);
+      ui.info(t('commit.messageProgress', { index: number, count: plan.length, key: group.key }));
       number += 1;
       try {
         const prompt = commitPrompt(group, groupContext(group, opts.maxDiffChars), opts.lang);
         const answer = await llm.ask({ ...prompt, tier: 'small', maxTokens: 80 });
         group.message = buildCommitMessage(group, answer, opts.lang);
       } catch (error) {
-        ui.warn(`Не удалось получить сообщение для группы "${group.key}": ${error.message}`);
+        ui.warn(t('commit.messageFailed', { key: group.key, error: error.message }));
         group.message = fallbackMessage(group);
       }
     }
@@ -110,29 +111,29 @@ export async function commitCommand(opts, config) {
   showPlan(plan);
 
   if (opts.dryRun) {
-    ui.info('Режим dry-run: изменения не внесены.');
+    ui.info(t('commit.dryRun'));
     return 0;
   }
-  if (!opts.yes && !(await ui.confirm('Выполнить план?'))) {
-    ui.info('Операция отменена.');
+  if (!opts.yes && !(await ui.confirm(t('commit.applyPlan')))) {
+    ui.info(t('common.cancelled'));
     return 0;
   }
 
-  ui.section('3. Ветка');
+  ui.section(t('commit.section.branch'));
   const choice = opts.stay ? '.' : await resolveBranch(opts.branch, startBranch);
   const stay = choice === '.';
   let branch;
   if (stay) {
-    if (startBranch === 'HEAD') throw new UserError('Репозиторий в состоянии detached HEAD. Перейдите на ветку или создайте новую.');
+    if (startBranch === 'HEAD') throw new UserError(t('commit.detached'));
     branch = startBranch;
-    ui.info(`Остаёмся в ветке ${branch}, новая ветка не создаётся.`);
+    ui.info(t('commit.staying', { branch }));
   } else {
     branch = choice;
     gitChecked(['switch', '-c', branch]);
-    ui.ok(`Создана ветка ${branch}`);
+    ui.ok(t('commit.created', { branch }));
   }
 
-  ui.section('4. Коммиты');
+  ui.section(t('commit.section.commits'));
   let created = 0;
   for (const group of plan) {
     addPaths(group.paths);
@@ -140,34 +141,37 @@ export async function commitCommand(opts, config) {
     if (result.code !== 0) {
       const text = `${result.stdout}\n${result.stderr}`;
       if (/nothing (added )?to commit|no changes added/.test(text)) {
-        ui.warn(`Пропущено (нет изменений): ${group.message}`);
+        ui.warn(t('commit.skipped', { message: group.message }));
         continue;
       }
-      throw new UserError(`Не удалось создать коммит "${group.message}": ${text.trim()}`);
+      throw new UserError(t('commit.failed', { message: group.message, details: text.trim() }));
     }
     created += 1;
     ui.ok(group.message);
   }
   const left = changedFiles();
-  if (left.length > 0) ui.warn(`Остались незафиксированные файлы: ${left.length}. Проверьте git status.`);
+  if (left.length > 0) ui.warn(t('commit.leftover', { count: left.length }));
 
   if (opts.noPush) {
-    ui.info('Отправка пропущена (--no-push).');
+    ui.info(t('commit.pushSkipped'));
   } else if (!remoteUrl(opts.remote)) {
-    ui.warn(`Удалённый репозиторий "${opts.remote}" не настроен. Отправка пропущена.`);
+    ui.warn(t('commit.noRemote', { remote: opts.remote }));
   } else {
-    ui.section('5. Отправка');
+    ui.section(t('commit.section.push'));
     gitChecked(['push', '-u', opts.remote, branch]);
-    ui.ok(`Ветка ${branch} отправлена в ${opts.remote}`);
-    if (stay) ui.info('Pull request не создаётся при работе в текущей ветке.');
+    ui.ok(t('commit.pushed', { branch, remote: opts.remote }));
+    if (stay) ui.info(t('commit.noPrOnCurrent'));
     else if (!opts.noPr) await createPullRequest({ llm, opts, branch, base });
   }
 
-  ui.section('Итог');
-  ui.info(`Ветка: ${branch}`);
-  ui.info(`Создано коммитов: ${created}`);
+  ui.section(t('commit.section.summary'));
+  ui.info(t('commit.summaryBranch', { branch }));
+  ui.info(t('commit.summaryCount', { count: created }));
   if (llm.usage.requests > 0) {
-    ui.info(`Запросов к модели: ${llm.usage.requests}, токенов: ${llm.usage.total || 'нет данных'}`);
+    ui.info(t('commit.summaryUsage', {
+      requests: llm.usage.requests,
+      tokens: llm.usage.total || t('commit.noData'),
+    }));
   }
   return 0;
 }

@@ -21,6 +21,8 @@ export const BUILTIN_DEFAULTS = Object.freeze({
   maxCodeGroups: 5,
   maxDiffChars: 6000,
   draft: false,
+  deepPr: false,
+  prMaxChars: 15000,
   author: '',
 });
 
@@ -94,6 +96,9 @@ export function resolveOptions(flags, config) {
     maxCodeGroups: asInt(pick('maxCodeGroups', defaults.maxCodeGroups), '--max-code-groups', 2, 10),
     maxDiffChars: asInt(pick('maxDiffChars', defaults.maxDiffChars), '--max-diff-chars', 500, 20000),
     draft: Boolean(pick('draft', defaults.draft)),
+    deepPr: Boolean(pick('deepPr', defaults.deepPr)),
+    prMaxChars: asInt(pick('prMaxChars', defaults.prMaxChars), '--pr-max-chars', 2000, 60000),
+    uiLang: flags.uiLang ?? config.defaults.uiLang,
     author: pick('author', defaults.author),
     branch: flags.branch,
     base: flags.base,

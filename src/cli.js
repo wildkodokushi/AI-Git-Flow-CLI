@@ -10,6 +10,7 @@ import { providerCommand } from './commands/provider.js';
 import { readmeCommand } from './commands/readme.js';
 import { loadConfig, resolveOptions } from './config.js';
 import { UserError } from './errors.js';
+import { setUiLocale, t, uiLocale } from './i18n.js';
 import * as ui from './ui.js';
 
 const OPTIONS = {
@@ -36,6 +37,9 @@ const OPTIONS = {
   'no-push': { type: 'boolean' },
   'no-pr': { type: 'boolean' },
   draft: { type: 'boolean' },
+  'deep-pr': { type: 'boolean' },
+  'pr-max-chars': { type: 'string' },
+  'ui-lang': { type: 'string' },
   force: { type: 'boolean' },
   'dry-run': { type: 'boolean' },
   dry: { type: 'boolean' },
@@ -76,8 +80,46 @@ export function version() {
   return JSON.parse(fs.readFileSync(file, 'utf8')).version;
 }
 
-export function helpText() {
-  return `AI Git Flow ${version()}: Git-ассистент на основе языковых моделей
+const HELP = {
+  en: `AI Git Flow {version}: Git assistant powered by language models
+
+Usage: aigf [command] [options]
+
+Commands
+  commit (default)       branch, commits by group, push and pull request
+  readme                 generate README.md from the repository contents
+  license                create a LICENSE file (MIT, Apache-2.0, GPL-3.0 and others)
+  issue "description"    turn a short note into a structured GitHub issue
+  init                   setup wizard: provider, key, models, check
+  doctor                 environment check and model calibration
+  provider list|use|add|key|remove|models   manage providers
+  config show|path|set|unset                default settings
+
+Commit options
+  -b, --branch <name>    new branch name; "." stays on the current branch
+  --stay, --here         no new branch: commit and push to the current one, no PR
+  --dry-run, --dry       show the result, change nothing
+  -y, --yes              do not ask for confirmation
+  --draft                create the PR as a draft
+  --deep-pr              richer PR: sends the diff, adds checks and notes for the reviewer
+  --pr-max-chars <n>     diff size sent in deep mode (default 15000)
+  --no-pr, --no-push     do not create a PR / do not push
+  --base <branch>        base branch for the PR
+
+Common options
+  --lang en|ru           language of generated texts (commits, PR, README, issue)
+  --ui-lang en|ru        language of the interface
+  --provider <name>      provider for this run only
+  --model <name>         model for short texts
+  --pr-model <name>      model for README, PR and issue
+  --type, --author, --year   license: type, copyright holder, year
+  --labels a,b           issue: labels
+  --force                overwrite LICENSE / README.md without asking
+  --insecure             skip TLS verification (unsafe)
+  -h, --help             help
+  -v, --version          version
+`,
+  ru: `AI Git Flow {version}: Git-ассистент на основе языковых моделей
 
 Использование: aigf [команда] [параметры]
 
@@ -97,11 +139,14 @@ export function helpText() {
   --dry-run, --dry       показать результат, ничего не менять
   -y, --yes              не спрашивать подтверждение
   --draft                создать PR как черновик
+  --deep-pr              подробный PR: в запрос передаётся diff, добавляются проверки и заметки
+  --pr-max-chars <n>     размер diff в глубоком режиме (по умолчанию 15000)
   --no-pr, --no-push     не создавать PR / не отправлять ветку
   --base <ветка>         базовая ветка для PR
 
 Общие параметры
-  --lang en|ru           язык текстов (коммиты, PR, README, issue)
+  --lang en|ru           язык генерируемых текстов (коммиты, PR, README, issue)
+  --ui-lang en|ru        язык интерфейса
   --provider <имя>       провайдер на один запуск
   --model <имя>          модель для коротких текстов
   --pr-model <имя>       модель для README, PR и issue
@@ -111,12 +156,19 @@ export function helpText() {
   --insecure             отключить проверку TLS (небезопасно)
   -h, --help             справка
   -v, --version          версия
-`;
+`,
+};
+
+export function helpText() {
+  return HELP[uiLocale()].replace('{version}', version());
 }
 
 export async function main(argv) {
   const { flags, positionals } = parseCli(argv);
   const [first, ...rest] = positionals;
+  const savedUiLang = loadConfig().defaults.uiLang;
+  if (flags.uiLang !== undefined) setUiLocale(flags.uiLang);
+  else if (savedUiLang !== undefined) setUiLocale(savedUiLang);
 
   if (flags.version || first === 'version') {
     ui.print(version());
@@ -129,7 +181,7 @@ export async function main(argv) {
 
   const command = first ?? 'commit';
   const handler = HANDLERS[command];
-  if (!handler) throw new UserError(`Неизвестная команда "${command}". Справка: aigf help`);
+  if (!handler) throw new UserError(t('cli.unknownCommand', { command }));
 
   const config = loadConfig();
   const opts = resolveOptions(flags, config);

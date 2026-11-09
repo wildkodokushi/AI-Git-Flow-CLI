@@ -13,7 +13,7 @@ export function defaultAnswer(prompt) {
   if (prompt.includes('Subject language: Russian')) return 'обновить документацию';
   if (prompt.includes('one-line commit message')) return 'Feat: added new component';
   if (prompt.includes('Write only the subject')) return 'Updated things';
-  if (prompt.includes('pull request title')) return 'Feat: added stuff\nThis change adds things. It helps the project.';
+  if (prompt.includes('Write the pull request text')) return 'TITLE: feat: added stuff\nDONE:\n- adds things\n- helps the project';
   if (prompt.includes('README file')) return 'DESCRIPTION: A demo project.\nFEATURES:\n- First feature\n- Second feature';
   if (prompt.includes('GitHub issue')) return 'TYPE: bug\nTITLE: Login button is broken\nBODY:\n## Description\nThe button does nothing.';
   return 'ok';
@@ -147,6 +147,7 @@ export function runCli(args, { cwd, home, input = '', env = {}, gh } = {}) {
         AIGF_HOME: home,
         AIGF_RETRY_DELAY_MS: '0',
         NO_COLOR: '1',
+        AIGF_UI_LANG: 'ru',
         PATH: pathParts.join(path.delimiter),
         ...env,
       },

@@ -51,8 +51,10 @@ test('commit: creates a branch, grouped normalised commits, pushes and opens a P
   assert.ok(create, gh.calls().join('\n'));
   assert.match(create, /--base main --head feat\/demo --title feat: add stuff --body-file -/);
   const body = gh.body('pr');
-  assert.match(body, /## Summary\n\nThis change adds things\./);
-  assert.match(body, /## Changes\n\n- build\(deps\): update things\n- feat\(components\)/);
+  assert.match(body, /## What changed\n\n- adds things\n- helps the project\n/);
+  assert.match(body, /## How to test\n\n```bash\nnpm install\n```/);
+  assert.match(body, /## Checklist\n\n- \[ \] CI passes/);
+  assert.doesNotMatch(body, /## Summary|## Changes/);
   assert.match(result.output, /токенов: \d+/);
 });
 
@@ -357,3 +359,52 @@ test('cli: version, help and unknown commands', async () => {
 test('default answers of the mock follow the formats the parsers expect', () => {
   assert.match(defaultAnswer('one-line commit message'), /^Feat:/);
 });
+
+test('commit --deep-pr sends the diff and adds checks and notes to the PR body', { skip: skipGh }, async () => {
+  const gh = makeFakeGh();
+  const deepMock = await startMockLlm((prompt) => {
+    if (prompt.includes('Write the pull request text')) {
+      return prompt.includes('CHECKS:')
+        ? 'TITLE: feat: add navigation\nDONE:\n- adds the navigation menu\n- updates the home page\nCHECKS:\n- open the home page on a phone width\nNOTES:\n- the old menu class is removed'
+        : 'TITLE: feat: add navigation\nDONE:\n- adds the navigation menu\n- updates the home page';
+    }
+    return defaultAnswer(prompt);
+  });
+  try {
+    const repo = makeRepo(undefined, {});
+    const home = tmp('aiflow-home-');
+    writeConfig(home, deepMock);
+    writeFiles(repo.dir, FEATURE_FILES);
+    const result = await runCli(['--branch', 'feat/deep', '--yes', '--deep-pr', '--lang', 'en'], { cwd: repo.dir, home, gh });
+    assert.equal(result.code, 0, result.output);
+    const prRequest = deepMock.requests.filter((r) => r.url.endsWith('/chat/completions')).find((r) => r.raw.includes('CHECKS:'));
+    assert.ok(prRequest, 'the deep request includes the CHECKS layout');
+    assert.match(prRequest.raw, /Diff:/);
+    const body = gh.body('pr');
+    assert.match(body, /## What changed\n\n- adds the navigation menu/);
+    assert.match(body, /## How to test\n\n```bash\nnpm install\n```\n\n- \[ \] open the home page on a phone width/);
+    assert.match(body, /## Notes\n\n- the old menu class is removed/);
+  } finally {
+    await deepMock.close();
+  }
+});
+
+test('--ui-lang en switches the interface to English while generated texts keep their language', async () => {
+  const home = tmp('aiflow-home-');
+  const help = await runCli(['--help', '--ui-lang', 'en'], { home });
+  assert.match(help.stdout, /Usage: aigf \[command\] \[options\]/);
+  assert.match(help.stdout, /--deep-pr/);
+
+  const ru = await runCli(['--help', '--ui-lang', 'ru'], { home });
+  assert.match(ru.stdout, /Использование: aigf/);
+
+  const ctx = makeRepo(undefined, { withRemote: false });
+  writeFiles(ctx.dir, { 'style.css': 'g {}\n' });
+  const langHome = tmp('aiflow-home-');
+  writeConfig(langHome, mock);
+  const result = await runCli(['--dry-run', '--ui-lang', 'en', '--lang', 'ru'], { cwd: ctx.dir, home: langHome });
+  assert.match(result.output, /Commit plan/);
+  assert.match(result.output, /Dry run: nothing was changed/);
+  assert.doesNotMatch(result.output, /План коммитов/);
+});
+

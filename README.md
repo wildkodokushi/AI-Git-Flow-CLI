@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="docs/logo.svg" width="120" alt="AI Git Flow logo">
+  <b>Русский</b> &nbsp;·&nbsp; <a href="https://github.com/wildkodokushi/AI-Git-Flow-CLI/blob/main/README.en.md">English</a>
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/wildkodokushi/AI-Git-Flow-CLI/main/docs/logo.svg" width="120" alt="AI Git Flow logo">
 </p>
 
 <h1 align="center">AI Git Flow CLI</h1>
@@ -19,7 +23,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/aigf-demo.gif" width="720" alt="Демонстрация aigf">
+  <img src="https://raw.githubusercontent.com/wildkodokushi/AI-Git-Flow-CLI/main/docs/aigf-demo.gif" width="720" alt="Демонстрация aigf">
 </p>
 
 ```bash
@@ -192,6 +196,17 @@ aigf --base develop               # PR в ветку develop
 
 Перед построением плана индекс сбрасывается (`git reset`, файлы остаются), чтобы собрать коммиты с нуля. Отправка выполняется без `--force`.
 
+### Pull request
+
+Тело PR состоит из разделов «Что сделано», «Как проверить», «Чеклист» и, если есть, «Заметки». Команды для проверки берутся из `package.json` (`npm ci`, `npm test` и т. д.), чеклист фиксированный.
+
+По умолчанию модель пишет заголовок и список изменений. Флаг `--deep-pr` включает подробный режим: в запрос передаётся diff (до `--pr-max-chars` символов, по умолчанию 15000, без lock-файлов), и модель добавляет проверки для ревьюера и заметки о рисках. Это тратит больше токенов, поэтому по умолчанию выключено. Включить постоянно: `aigf config set deepPr true`.
+
+```bash
+aigf --deep-pr                    # подробный PR
+aigf --deep-pr --pr-max-chars 30000
+```
+
 ### aigf readme
 
 Создаёт `README.md`. Код определяет технологии, команды запуска (из `scripts` в `package.json`), дерево проекта, адрес для `git clone` (учётные данные из URL удаляются) и раздел о лицензии. Модель пишет описание проекта и список возможностей только по тому, что видно в файлах. Существующий файл не перезаписывается без подтверждения или `--force`. Всегда проверяйте результат.
@@ -242,6 +257,10 @@ aigf config show | path | set <ключ> <значение> | unset <ключ>
 | `-y`, `--yes` | Не спрашивать подтверждение. |
 | `--lang en\|ru` | Язык тем коммитов, PR, README и issue. По умолчанию `en`. |
 | `--draft` | Создать PR черновиком. |
+| `--deep-pr` | Подробный PR: diff в запрос, проверки и заметки для ревьюера. |
+| `--pr-max-chars <n>` | Размер diff в глубоком режиме (по умолчанию 15000). |
+| `--lang en\|ru` | Язык генерируемых текстов: коммитов, PR, README, issue. |
+| `--ui-lang en\|ru` | Язык интерфейса (сообщения, справка). |
 | `--no-pr`, `--no-push` | Не создавать PR, не отправлять ветку. |
 | `--base <ветка>` | Базовая ветка PR. Определяется автоматически. |
 | `--remote <имя>` | Удалённый репозиторий. По умолчанию `origin`. |
@@ -265,7 +284,11 @@ aigf config set maxCodeGroups 4
 aigf config show
 ```
 
-Ключи: `lang`, `remote`, `author`, `draft`, `maxCodeGroups`, `maxDiffChars`. Параметры командной строки всегда приоритетнее.
+Ключи: `lang`, `uiLang`, `remote`, `author`, `draft`, `deepPr`, `prMaxChars`, `maxCodeGroups`, `maxDiffChars`. Параметры командной строки всегда приоритетнее.
+
+**Язык.** Два независимых параметра. `--lang` задаёт язык генерируемых текстов (коммиты, PR, README, issue). `--ui-lang` задаёт язык интерфейса: сообщения, справку, подсказки. По умолчанию интерфейс берётся из системной локали (русская → русский, иначе английский). Переопределить можно переменной `AIGF_UI_LANG` или `aigf config set uiLang en`.
+
+Перевод интерфейса пока частичный: переведены справка, сообщения коммитов и PR. Мастер `init`, `doctor`, `license`, `readme`, `issue`, `provider`, `config` и текст ошибок пока на русском. Полный перевод в планах.
 
 ## Правила группировки файлов
 

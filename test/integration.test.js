@@ -408,3 +408,99 @@ test('--ui-lang en switches the interface to English while generated texts keep 
   assert.doesNotMatch(result.output, /План коммитов/);
 });
 
+
+// ---------------------------------------------------------------------------
+// Pull request base branch: main -> dev -> feature must open a PR into dev
+// ---------------------------------------------------------------------------
+
+function repoWithDev({ pushDev = true, extraLocalOnDev = false } = {}) {
+  const repo = makeRepo(undefined, {});
+  git(repo.dir, 'switch', '-q', '-c', 'dev');
+  writeFiles(repo.dir, { 'src/earlier/one.js': 'export const one = 1;\n' });
+  git(repo.dir, 'add', '-A');
+  git(repo.dir, 'commit', '-q', '-m', 'feat: earlier dev work one');
+  writeFiles(repo.dir, { 'src/earlier/two.js': 'export const two = 2;\n' });
+  git(repo.dir, 'add', '-A');
+  git(repo.dir, 'commit', '-q', '-m', 'feat: earlier dev work two');
+  if (pushDev) git(repo.dir, 'push', '-q', '-u', 'origin', 'dev');
+  if (extraLocalOnDev) {
+    writeFiles(repo.dir, { 'src/earlier/three.js': 'export const three = 3;\n' });
+    git(repo.dir, 'add', '-A');
+    git(repo.dir, 'commit', '-q', '-m', 'feat: unpushed dev work');
+  }
+  writeFiles(repo.dir, { 'src/components/Nav.jsx': 'export const Nav = () => null;\n', 'style.css': 'nav { color: red }\n' });
+  const home = tmp('aiflow-home-');
+  return { ...repo, home };
+}
+
+const prPromptOf = (server) =>
+  server.requests.filter((r) => r.url.endsWith('/chat/completions')).map((r) => r.raw).find((raw) => raw.includes('Write the pull request text'));
+
+test('PR: a feature branch created from dev opens the pull request into dev, not main', { skip: skipGh }, async () => {
+  const gh = makeFakeGh();
+  const spy = await startMockLlm();
+  try {
+    const ctx = repoWithDev();
+    writeConfig(ctx.home, spy);
+    const result = await runCli(['--branch', 'feat/nav', '--yes'], { cwd: ctx.dir, home: ctx.home, gh });
+    assert.equal(result.code, 0, result.output);
+    assert.match(result.output, /Pull request будет создан в dev/);
+
+    const create = gh.calls().find((line) => line.startsWith('pr create'));
+    assert.match(create, /--base dev --head feat\/nav/, create);
+    assert.doesNotMatch(create, /--base main/);
+
+    const prompt = prPromptOf(spy);
+    assert.ok(prompt, 'the model was asked for the PR text');
+    assert.match(prompt, /feat\(components\): add new component/);
+    assert.match(prompt, /style: update things/);
+    assert.doesNotMatch(prompt, /earlier dev work/, 'commits already on dev are not described');
+  } finally {
+    await spy.close();
+  }
+});
+
+test('PR: when dev only exists locally the PR is not created against a wrong branch', { skip: skipGh }, async () => {
+  const gh = makeFakeGh();
+  const ctx = repoWithDev({ pushDev: false });
+  writeConfig(ctx.home, mock);
+  const result = await runCli(['--branch', 'feat/nav', '--yes'], { cwd: ctx.dir, home: ctx.home, gh });
+  assert.equal(result.code, 0, result.output);
+  assert.equal(gh.calls().some((l) => l.startsWith('pr create')), false, 'no PR is opened against a missing branch');
+  assert.match(result.output, /Ветки dev нет на origin/);
+  assert.match(result.output, /git push -u origin dev/);
+  assert.match(result.output, /Текст pull request для ручного создания/);
+});
+
+test('PR: warns when local dev is ahead of the remote dev', { skip: skipGh }, async () => {
+  const gh = makeFakeGh();
+  const ctx = repoWithDev({ extraLocalOnDev: true });
+  writeConfig(ctx.home, mock);
+  const result = await runCli(['--branch', 'feat/nav', '--yes'], { cwd: ctx.dir, home: ctx.home, gh });
+  assert.equal(result.code, 0, result.output);
+  assert.match(result.output, /Локальная dev опережает origin\/dev на 1/);
+  assert.match(gh.calls().find((l) => l.startsWith('pr create')), /--base dev/);
+});
+
+test('PR: an explicit --base overrides the starting branch and describes what GitHub will show', { skip: skipGh }, async () => {
+  const gh = makeFakeGh();
+  const spy = await startMockLlm();
+  try {
+    const ctx = repoWithDev();
+    writeConfig(ctx.home, spy);
+    const result = await runCli(['--branch', 'feat/nav', '--yes', '--base', 'main'], { cwd: ctx.dir, home: ctx.home, gh });
+    assert.equal(result.code, 0, result.output);
+    assert.match(gh.calls().find((l) => l.startsWith('pr create')), /--base main --head feat\/nav/);
+    assert.match(prPromptOf(spy), /earlier dev work/, 'against main, GitHub shows the dev commits too, so the text includes them');
+  } finally {
+    await spy.close();
+  }
+});
+
+test('PR: starting from main still targets main', { skip: skipGh }, async () => {
+  const gh = makeFakeGh();
+  const ctx = setup({ 'style.css': 'x {}\n' });
+  const result = await runCli(['--branch', 'feat/plain', '--yes'], { cwd: ctx.dir, home: ctx.home, gh });
+  assert.equal(result.code, 0, result.output);
+  assert.match(gh.calls().find((l) => l.startsWith('pr create')), /--base main --head feat\/plain/);
+});

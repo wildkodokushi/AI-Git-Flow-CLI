@@ -77,7 +77,10 @@ export async function commitCommand(opts, config) {
   ui.info(t('commit.changedFiles', { count: changes.length }));
 
   const startBranch = currentBranch();
-  const base = opts.base || defaultBranch(opts.remote, startBranch);
+  const startCommit = git(['rev-parse', 'HEAD']).stdout.trim() || null;
+  // A pull request goes back to the branch the new one is created from (main -> dev -> feature opens a PR into dev).
+  // Detached HEAD has no branch to return to, so the remote default branch is used.
+  const base = opts.base || (startBranch !== 'HEAD' ? startBranch : defaultBranch(opts.remote, startBranch));
 
   const llm = createLlm(opts, config);
   ui.info(t('commit.provider', { name: llm.name, model: llm.models.small }));
@@ -131,6 +134,7 @@ export async function commitCommand(opts, config) {
     branch = choice;
     gitChecked(['switch', '-c', branch]);
     ui.ok(t('commit.created', { branch }));
+    if (!opts.noPr && !opts.noPush) ui.info(t('commit.prBase', { base }));
   }
 
   ui.section(t('commit.section.commits'));
@@ -161,7 +165,7 @@ export async function commitCommand(opts, config) {
     gitChecked(['push', '-u', opts.remote, branch]);
     ui.ok(t('commit.pushed', { branch, remote: opts.remote }));
     if (stay) ui.info(t('commit.noPrOnCurrent'));
-    else if (!opts.noPr) await createPullRequest({ llm, opts, branch, base });
+    else if (!opts.noPr) await createPullRequest({ llm, opts, branch, base, fromCommit: base === startBranch ? startCommit : null });
   }
 
   ui.section(t('commit.section.summary'));

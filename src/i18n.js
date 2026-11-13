@@ -50,6 +50,9 @@ const STRINGS = {
     'pr.created': 'Pull request created: {url}',
     'pr.createdNoUrl': 'Pull request created.',
     'pr.deepNote': 'Deep mode: sending up to {chars} characters of the diff.',
+    'commit.prBase': 'The pull request will target {base} (the branch this one was created from). Use --base to change it.',
+    'pr.baseMissing': 'Branch {base} does not exist on {remote}, so the pull request was not created. Push it first (git push -u {remote} {base}) or choose another one with --base.',
+    'pr.baseBehind': 'Local {base} is {count} commit(s) ahead of {remote}/{base}. They will appear in the pull request. Push {base} first to keep it clean.',
     'cli.unknownCommand': 'Unknown command "{command}". Help: aigf help',
   },
   ru: {
@@ -100,6 +103,9 @@ const STRINGS = {
     'pr.created': 'Pull request создан: {url}',
     'pr.createdNoUrl': 'Pull request создан.',
     'pr.deepNote': 'Глубокий режим: в запрос передаётся до {chars} символов diff.',
+    'commit.prBase': 'Pull request будет создан в {base} (ветка, от которой создана текущая). Изменить: --base.',
+    'pr.baseMissing': 'Ветки {base} нет на {remote}, поэтому pull request не создан. Сначала отправьте её (git push -u {remote} {base}) или выберите другую через --base.',
+    'pr.baseBehind': 'Локальная {base} опережает {remote}/{base} на {count} коммит(а). Они попадут в pull request. Сначала отправьте {base}, чтобы PR остался чистым.',
     'cli.unknownCommand': 'Неизвестная команда "{command}". Справка: aigf help',
   },
 };

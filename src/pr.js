@@ -64,17 +64,49 @@ function diffForReview(range, maxChars) {
   return `${patch.slice(0, maxChars)}\n[diff truncated]`;
 }
 
-export async function createPullRequest({ llm, opts, branch, base }) {
-  ui.section(t('pr.section'));
-  const baseRef = refExists(`refs/remotes/${opts.remote}/${base}`) ? `${opts.remote}/${base}` : base;
-  const range = `${baseRef}...${branch}`;
+/**
+ * Looks the base branch up on the remote. `exists` is null when the remote cannot be asked
+ * (offline, no access): the pull request is then attempted anyway and gh reports the real reason.
+ */
+export function remoteBranch(remote, name) {
+  const result = git(['ls-remote', '--exit-code', '--heads', remote, name]);
+  if (result.code === 2) return { exists: false, tip: null };
+  if (result.code !== 0) return { exists: null, tip: null };
+  const tip = result.stdout.split(/\s+/)[0] || null;
+  return { exists: true, tip };
+}
 
-  const log = git(['log', '--reverse', '--pretty=format:%s', `${baseRef}..${branch}`]).stdout;
+export async function createPullRequest({ llm, opts, branch, base, fromCommit = null }) {
+  ui.section(t('pr.section'));
+
+  // Commits and diff are counted from the point where the branch was created, so only the work
+  // done by this run is described, not everything the base branch has accumulated since main.
+  let range;
+  let logRange;
+  let baseLabel = base;
+  if (fromCommit) {
+    range = `${fromCommit}..${branch}`;
+    logRange = range;
+  } else {
+    const baseRef = refExists(`refs/remotes/${opts.remote}/${base}`) ? `${opts.remote}/${base}` : base;
+    range = `${baseRef}...${branch}`;
+    logRange = `${baseRef}..${branch}`;
+    baseLabel = baseRef;
+  }
+
+  const log = git(['log', '--reverse', '--pretty=format:%s', logRange]).stdout;
   const subjects = log.split(/\r?\n/).filter((line) => line.trim());
   if (subjects.length === 0) {
-    ui.warn(t('pr.noCommits', { base: baseRef }));
+    ui.warn(t('pr.noCommits', { base: baseLabel }));
     return null;
   }
+
+  const remoteBase = remoteBranch(opts.remote, base);
+  if (remoteBase.exists && remoteBase.tip && fromCommit && git(['cat-file', '-e', `${remoteBase.tip}^{commit}`]).code === 0) {
+    const ahead = Number(git(['rev-list', '--count', `${remoteBase.tip}..${fromCommit}`]).stdout.trim());
+    if (ahead > 0) ui.warn(t('pr.baseBehind', { base, remote: opts.remote, count: ahead }));
+  }
+
   const stat = git(['diff', '--stat=100', range]).stdout;
   const deep = Boolean(opts.deepPr);
   const patch = deep ? diffForReview(range, opts.prMaxChars) : null;
@@ -100,15 +132,18 @@ export async function createPullRequest({ llm, opts, branch, base }) {
   });
 
   const status = ghStatus();
-  if (!status.installed || !status.authed) {
-    ui.warn(status.installed ? t('pr.ghNotAuthed') : t('pr.ghNotFound', { hint: installHint() }));
+  const manual = (reason) => {
+    ui.warn(reason);
     ui.info(t('pr.manualText'));
     ui.print('');
     ui.print(title);
     ui.print('');
     ui.print(body);
     return null;
-  }
+  };
+  if (!status.installed) return manual(t('pr.ghNotFound', { hint: installHint() }));
+  if (!status.authed) return manual(t('pr.ghNotAuthed'));
+  if (remoteBase.exists === false) return manual(t('pr.baseMissing', { base, remote: opts.remote }));
 
   const args = ['pr', 'create', '--base', base, '--head', branch, '--title', title, '--body-file', '-'];
   if (opts.draft) args.push('--draft');

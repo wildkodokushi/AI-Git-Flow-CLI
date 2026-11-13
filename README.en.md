@@ -90,6 +90,10 @@ Enter `.` at the branch prompt (or pass `--stay`) to commit to the current branc
 
 ### Pull request
 
+**Target branch.** The pull request targets the branch your new branch was created from. With `main` → `dev` → `feat/x`, the PR goes from `feat/x` into `dev`, not into `main`, and describes only the commits this run created, not the ones `dev` already had. Pass `--base` to choose another branch; the description then matches what GitHub will show.
+
+Two checks run before creating it. If the base branch does not exist on the remote, no PR is created: the tool prints the text for manual creation and suggests `git push -u origin <branch>`. If the local base is ahead of the remote one, it warns that the extra commits will appear in the PR.
+
 The body has four sections: **What changed**, **How to test**, **Checklist** and, when there is something to say, **Notes**. Test commands come from `package.json` (`npm ci`, `npm run lint`, `npm test`, `npm run build`).
 
 By default the model writes the title and the list of changes. `--deep-pr` switches to a richer mode: the diff goes into the request (up to `--pr-max-chars` characters, 15,000 by default, lock files excluded), and the model adds manual checks for the reviewer and notes about risks. It uses more tokens, so it is off by default. Enable it permanently with `aigf config set deepPr true`.
@@ -148,7 +152,7 @@ aigf config show | path | set <key> <value> | unset <key>
 | `--deep-pr` | Richer pull request: diff in the request, checks and notes. |
 | `--pr-max-chars <n>` | Diff size for deep mode. Default 15000. |
 | `--no-pr`, `--no-push` | Skip the pull request / skip pushing. |
-| `--base <branch>` | Base branch for the pull request. |
+| `--base <branch>` | Branch the pull request targets. Defaults to the branch the new one is created from. |
 | `--remote <name>` | Remote. Default `origin`. |
 | `--provider <name>` | Provider for this run. |
 | `--model`, `--pr-model` | Models for short texts and for PR, README and issues. |

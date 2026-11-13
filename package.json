@@ -1,6 +1,6 @@
 {
   "name": "ai-git-flow",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "AI-powered Git assistant: grouped Conventional Commits, branches, pull requests, README, LICENSE and issues with GigaChat or any OpenAI-compatible model.",
   "type": "module",
   "bin": {

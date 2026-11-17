@@ -392,11 +392,13 @@ test('commit --deep-pr sends the diff and adds checks and notes to the PR body',
 test('--ui-lang en switches the interface to English while generated texts keep their language', async () => {
   const home = tmp('aiflow-home-');
   const help = await runCli(['--help', '--ui-lang', 'en'], { home });
-  assert.match(help.stdout, /Usage: aigf \[command\] \[options\]/);
+  assert.match(help.stdout, /QUICK START/);
+  assert.match(help.stdout, /aigf --dry-run +see the commit plan/);
   assert.match(help.stdout, /--deep-pr/);
 
   const ru = await runCli(['--help', '--ui-lang', 'ru'], { home });
-  assert.match(ru.stdout, /Использование: aigf/);
+  assert.match(ru.stdout, /БЫСТРЫЙ СТАРТ/);
+  assert.match(ru.stdout, /aigf --dry-run +посмотреть план коммитов/);
 
   const ctx = makeRepo(undefined, { withRemote: false });
   writeFiles(ctx.dir, { 'style.css': 'g {}\n' });
@@ -503,4 +505,101 @@ test('PR: starting from main still targets main', { skip: skipGh }, async () => 
   const result = await runCli(['--branch', 'feat/plain', '--yes'], { cwd: ctx.dir, home: ctx.home, gh });
   assert.equal(result.code, 0, result.output);
   assert.match(gh.calls().find((l) => l.startsWith('pr create')), /--base main --head feat\/plain/);
+});
+
+
+// ---------------------------------------------------------------------------
+// Options without a value show the current value instead of failing
+// ---------------------------------------------------------------------------
+
+const tipHome = (extra = {}) => {
+  const home = tmp('aiflow-home-');
+  writeConfig(home, mock, { defaults: { lang: 'ru' }, ...extra });
+  return home;
+};
+
+test('tips: an option without a value shows the current value and exits 0', async () => {
+  const home = tipHome();
+  const lang = await runCli(['--lang'], { home });
+  assert.equal(lang.code, 0, lang.output);
+  assert.match(lang.stdout, /\[TIP\] +Язык генерируемых текстов \(--lang\): ru/);
+  assert.match(lang.stdout, /Изменить: aigf --lang ru\|en/);
+  assert.doesNotMatch(lang.output, /\[ERROR\]|argument missing/);
+
+  const provider = await runCli(['--provider'], { home });
+  assert.match(provider.stdout, /\(--provider\): mock/);
+  const model = await runCli(['--model'], { home });
+  assert.match(model.stdout, /\(--model\): m-small/);
+  const prModel = await runCli(['--pr-model'], { home });
+  assert.match(prModel.stdout, /\(--pr-model\): m-large/);
+
+  const english = await runCli(['--ui-lang', 'en', '--lang'], { home });
+  assert.match(english.stdout, /Language of generated texts \(--lang\): ru/);
+});
+
+test('tips: the default language is shown when nothing is configured', async () => {
+  const home = tmp('aiflow-home-');
+  const result = await runCli(['--lang'], { home });
+  assert.match(result.stdout, /\(--lang\): en/);
+  const provider = await runCli(['--provider'], { home });
+  assert.match(provider.stdout, /\(--provider\): не задано/);
+});
+
+test('tips: -b and --base report the current branch, outside a repository they explain', async () => {
+  const home = tipHome();
+  const repo = makeRepo(undefined, { withRemote: false });
+  git(repo.dir, 'switch', '-q', '-c', 'dev');
+  for (const flag of ['-b', '--branch']) {
+    const result = await runCli([flag], { cwd: repo.dir, home });
+    assert.equal(result.code, 0, result.output);
+    assert.match(result.stdout, /Текущая ветка \(-b, --branch\): dev/);
+  }
+  const base = await runCli(['--base'], { cwd: repo.dir, home });
+  assert.match(base.stdout, /Ветка для pull request \(--base\): dev/);
+
+  const outside = await runCli(['-b'], { cwd: tmp('aiflow-notrepo-'), home });
+  assert.equal(outside.code, 0);
+  assert.match(outside.stdout, /Вы не в Git-репозитории/);
+});
+
+test('tips: --author falls back to git config and a flag followed by another flag still answers', async () => {
+  const home = tipHome();
+  const repo = makeRepo(undefined, { withRemote: false });
+  const author = await runCli(['--author'], { cwd: repo.dir, home });
+  assert.match(author.stdout, /\(--author\): Test User/);
+  const chained = await runCli(['--lang', '--dry-run'], { cwd: repo.dir, home });
+  assert.equal(chained.code, 0, chained.output);
+  assert.match(chained.stdout, /\(--lang\): ru/);
+});
+
+test('tips: options without a meaningful current value show an example and exit 1', async () => {
+  const home = tipHome();
+  const labels = await runCli(['--labels'], { home });
+  assert.equal(labels.code, 1);
+  assert.match(labels.stdout, /\[TIP\] +Для параметра --labels нужно значение\. Пример: aigf issue/);
+  assert.doesNotMatch(labels.output, /\[ERROR\]/);
+  const type = await runCli(['--type'], { home });
+  assert.match(type.stdout, /aigf license --type mit/);
+});
+
+test('tips: a value given with = or as the next word is not intercepted', async () => {
+  const ctx = setup({ 'style.css': 'tip {}\n' });
+  const eq = await runCli(['--lang=ru', '--dry-run'], { cwd: ctx.dir, home: ctx.home });
+  assert.equal(eq.code, 0, eq.output);
+  assert.match(eq.output, /План коммитов/);
+  const spaced = await runCli(['--lang', 'ru', '--dry-run', '-b', 'feat/x'], { cwd: ctx.dir, home: ctx.home });
+  assert.equal(spaced.code, 0, spaced.output);
+  assert.doesNotMatch(spaced.output, /\[TIP\]/);
+});
+
+test('unknown options get a friendly message with a suggestion', async () => {
+  const home = tmp('aiflow-home-');
+  const typo = await runCli(['--lnag', 'ru'], { home });
+  assert.equal(typo.code, 1);
+  assert.match(typo.output, /\[ERROR\] Неизвестный параметр --lnag\. Возможно, вы имели в виду --lang\?/);
+  const nonsense = await runCli(['--zzzzzzzz'], { home });
+  assert.match(nonsense.output, /Неизвестный параметр --zzzzzzzz\. Справка/);
+  assert.doesNotMatch(nonsense.output, /Возможно, вы имели в виду/);
+  const english = await runCli(['--ui-lang', 'en', '--dryrun'], { home });
+  assert.match(english.output, /Unknown option --dryrun\. Did you mean --dry-run\?/);
 });

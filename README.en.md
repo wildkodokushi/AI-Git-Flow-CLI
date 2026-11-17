@@ -140,6 +140,20 @@ aigf config show | path | set <key> <value> | unset <key>
 
 ## Options
 
+**An option without a value shows the current one.** If you forget what is set, there is no need to open the settings: type the option with no value.
+
+```text
+$ aigf --lang
+[TIP]   Language of generated texts (--lang): en
+[TIP]   Change: aigf --lang ru|en   |   permanently: aigf config set lang ru
+
+$ aigf -b
+[TIP]   Current branch (-b, --branch): dev
+```
+
+This works for `-b/--branch`, `--base`, `--lang`, `--ui-lang`, `--remote`, `--provider`, `--model`, `--pr-model`, `--author`, `--year`, `--max-code-groups`, `--max-diff-chars` and `--pr-max-chars`. For options that have no "current value" (`--labels`, `--type`, `--small-model` and others) the tip shows an example. A misspelled option gets a "Did you mean…" hint.
+
+
 | Option | Description |
 |---|---|
 | `-b`, `--branch <name>` | New branch name. `.` stays on the current branch. |
@@ -253,6 +267,24 @@ npm test        # no dependencies; needs Node 20+
 The tests use real git repositories, a local bare "remote", a fake model server (including the GigaChat key exchange), a private certificate authority for TLS checks and a fake `gh`. No real service is called.
 
 To publish a version, bump `version` in `package.json`, commit, and push a tag: `git tag v2.0.1 && git push origin main --tags`. GitHub Actions checks that the tag matches the version, runs the tests, publishes to npm with provenance and creates a release with the `.tgz` package and `SHA256SUMS`. Publishing needs an `NPM_TOKEN` secret, or a Trusted Publisher configured on npmjs.com; the README in the repository's "Development" section describes both.
+
+### GitHub Packages
+
+Besides npm, the package can be published to GitHub Packages, where it shows up in the "Packages" block of the repository page. The release workflow does this as a second step after the npm release succeeds, so a failure here never affects the npm package. Nothing needs to be enabled: GitHub Packages is available to every repository and the "Packages" block appears after the first publish.
+
+Two limits apply. The package name must be scoped (`@owner/name`), so the workflow publishes it as `@wildkodokushi/ai-git-flow`. And installing from GitHub Packages needs a token even for a public package. For that reason the main install path stays `npx ai-git-flow init`, and GitHub Packages acts as a mirror.
+
+Install from GitHub Packages (a token with `read:packages` is required):
+
+```text
+# ~/.npmrc
+@wildkodokushi:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=<YOUR_TOKEN>
+```
+
+```bash
+npm install -g @wildkodokushi/ai-git-flow
+```
 
 ## License
 

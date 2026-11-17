@@ -10,7 +10,9 @@ import { providerCommand } from './commands/provider.js';
 import { readmeCommand } from './commands/readme.js';
 import { loadConfig, resolveOptions } from './config.js';
 import { UserError } from './errors.js';
+import { helpFor } from './help.js';
 import { setUiLocale, t, uiLocale } from './i18n.js';
+import { showCurrentValue } from './query.js';
 import * as ui from './ui.js';
 
 const OPTIONS = {
@@ -63,16 +65,92 @@ const HANDLERS = {
 
 const camel = (name) => name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
 
+const LONG_OPTIONS = Object.keys(OPTIONS);
+
+/** Edit distance, used only to suggest a close option name. */
+function distance(a, b) {
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    let previous = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const current = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, previous + (a[i - 1] === b[j - 1] ? 0 : 1));
+      previous = current;
+    }
+  }
+  return row[b.length];
+}
+
+export function suggestOption(name) {
+  let best = null;
+  for (const candidate of LONG_OPTIONS) {
+    const d = distance(name, candidate);
+    if (d <= 2 && (!best || d < best.d)) best = { name: candidate, d };
+  }
+  return best ? `--${best.name}` : null;
+}
+
 export function parseCli(argv) {
   let parsed;
   try {
     parsed = parseArgs({ args: argv, options: OPTIONS, allowPositionals: true, strict: true });
   } catch (error) {
-    throw new UserError(`${error.message} Справка: aigf help`);
+    if (error.code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION') {
+      const raw = /'(-{1,2}[^']+)'/.exec(error.message)?.[1] ?? '';
+      const suggestion = suggestOption(raw.replace(/^-+/, ''));
+      throw new UserError(t('cli.unknownOption', {
+        option: raw,
+        suggestion: suggestion ? t('cli.didYouMean', { suggestion }) : '',
+      }));
+    }
+    throw new UserError(t('cli.badArgs', { message: error.message }));
   }
   const flags = {};
   for (const [name, value] of Object.entries(parsed.values)) flags[camel(name)] = value;
   return { flags, positionals: parsed.positionals };
+}
+
+// ---------------------------------------------------------------------------
+// An option that takes a value but was given none (aigf --lang, aigf -b) shows its current value
+// instead of failing.
+// ---------------------------------------------------------------------------
+
+function valueOptionName(token) {
+  if (/^--[a-z-]+$/.test(token)) {
+    const name = token.slice(2);
+    return Object.hasOwn(OPTIONS, name) && OPTIONS[name].type === 'string' ? name : null;
+  }
+  if (/^-[a-zA-Z]$/.test(token)) {
+    const entry = Object.entries(OPTIONS).find(([, option]) => option.short === token[1] && option.type === 'string');
+    return entry ? entry[0] : null;
+  }
+  return null;
+}
+
+export function findMissingValue(argv) {
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === '--') return null;
+    const name = valueOptionName(argv[i]);
+    if (!name) continue;
+    const next = argv[i + 1];
+    if (next === undefined || next.startsWith('-')) return name;
+    i += 1; // the next token is this option's value
+  }
+  return null;
+}
+
+/** The interface language must be known before anything is printed, even for argument errors. */
+function applyUiLocale(argv, config) {
+  const index = argv.findIndex((token) => token === '--ui-lang' || token.startsWith('--ui-lang='));
+  if (index >= 0) {
+    const value = argv[index].includes('=') ? argv[index].split('=')[1] : argv[index + 1];
+    if (value === 'en' || value === 'ru') {
+      setUiLocale(value);
+      return;
+    }
+  }
+  if (config.defaults.uiLang === 'en' || config.defaults.uiLang === 'ru') setUiLocale(config.defaults.uiLang);
 }
 
 export function version() {
@@ -80,95 +158,19 @@ export function version() {
   return JSON.parse(fs.readFileSync(file, 'utf8')).version;
 }
 
-const HELP = {
-  en: `AI Git Flow {version}: Git assistant powered by language models
-
-Usage: aigf [command] [options]
-
-Commands
-  commit (default)       branch, commits by group, push and pull request
-  readme                 generate README.md from the repository contents
-  license                create a LICENSE file (MIT, Apache-2.0, GPL-3.0 and others)
-  issue "description"    turn a short note into a structured GitHub issue
-  init                   setup wizard: provider, key, models, check
-  doctor                 environment check and model calibration
-  provider list|use|add|key|remove|models   manage providers
-  config show|path|set|unset                default settings
-
-Commit options
-  -b, --branch <name>    new branch name; "." stays on the current branch
-  --stay, --here         no new branch: commit and push to the current one, no PR
-  --dry-run, --dry       show the result, change nothing
-  -y, --yes              do not ask for confirmation
-  --draft                create the PR as a draft
-  --deep-pr              richer PR: sends the diff, adds checks and notes for the reviewer
-  --pr-max-chars <n>     diff size sent in deep mode (default 15000)
-  --no-pr, --no-push     do not create a PR / do not push
-  --base <branch>        base branch for the PR
-
-Common options
-  --lang en|ru           language of generated texts (commits, PR, README, issue)
-  --ui-lang en|ru        language of the interface
-  --provider <name>      provider for this run only
-  --model <name>         model for short texts
-  --pr-model <name>      model for README, PR and issue
-  --type, --author, --year   license: type, copyright holder, year
-  --labels a,b           issue: labels
-  --force                overwrite LICENSE / README.md without asking
-  --insecure             skip TLS verification (unsafe)
-  -h, --help             help
-  -v, --version          version
-`,
-  ru: `AI Git Flow {version}: Git-ассистент на основе языковых моделей
-
-Использование: aigf [команда] [параметры]
-
-Команды
-  commit (по умолчанию)  ветка, коммиты по группам, push и pull request
-  readme                 сгенерировать README.md по содержимому репозитория
-  license                создать файл LICENSE (MIT, Apache-2.0, GPL-3.0 и другие)
-  issue "описание"       превратить заметку в структурированный issue на GitHub
-  init                   мастер настройки: провайдер, ключ, модели, проверка
-  doctor                 диагностика окружения и проверка модели
-  provider list|use|add|key|remove|models   управление провайдерами
-  config show|path|set|unset                настройки по умолчанию
-
-Параметры commit
-  -b, --branch <имя>     имя новой ветки; "." оставляет текущую ветку
-  --stay, --here         не создавать ветку: коммит и push в текущую ветку, без PR
-  --dry-run, --dry       показать результат, ничего не менять
-  -y, --yes              не спрашивать подтверждение
-  --draft                создать PR как черновик
-  --deep-pr              подробный PR: в запрос передаётся diff, добавляются проверки и заметки
-  --pr-max-chars <n>     размер diff в глубоком режиме (по умолчанию 15000)
-  --no-pr, --no-push     не создавать PR / не отправлять ветку
-  --base <ветка>         базовая ветка для PR
-
-Общие параметры
-  --lang en|ru           язык генерируемых текстов (коммиты, PR, README, issue)
-  --ui-lang en|ru        язык интерфейса
-  --provider <имя>       провайдер на один запуск
-  --model <имя>          модель для коротких текстов
-  --pr-model <имя>       модель для README, PR и issue
-  --type, --author, --year   license: тип, правообладатель, год
-  --labels a,b           issue: метки
-  --force                перезаписать LICENSE / README.md без вопроса
-  --insecure             отключить проверку TLS (небезопасно)
-  -h, --help             справка
-  -v, --version          версия
-`,
-};
-
 export function helpText() {
-  return HELP[uiLocale()].replace('{version}', version());
+  return helpFor(uiLocale(), version());
 }
 
 export async function main(argv) {
+  const config = loadConfig();
+  applyUiLocale(argv, config);
+
+  const missing = findMissingValue(argv);
+  if (missing) return showCurrentValue(missing, { opts: resolveOptions({}, config), config });
+
   const { flags, positionals } = parseCli(argv);
   const [first, ...rest] = positionals;
-  const savedUiLang = loadConfig().defaults.uiLang;
-  if (flags.uiLang !== undefined) setUiLocale(flags.uiLang);
-  else if (savedUiLang !== undefined) setUiLocale(savedUiLang);
 
   if (flags.version || first === 'version') {
     ui.print(version());
@@ -183,7 +185,6 @@ export async function main(argv) {
   const handler = HANDLERS[command];
   if (!handler) throw new UserError(t('cli.unknownCommand', { command }));
 
-  const config = loadConfig();
   const opts = resolveOptions(flags, config);
   return handler(opts, config, rest);
 }

@@ -1,6 +1,8 @@
 // Interface language. Generated texts (commit subjects, PR, README) follow `--lang`;
 // the interface itself follows `--ui-lang`, AIGF_UI_LANG, the saved setting or the system locale.
 
+import { TIPS } from './i18n-tips.js';
+
 const STRINGS = {
   en: {
     'banner.commit': 'Branch, commits and pull request',
@@ -109,6 +111,8 @@ const STRINGS = {
     'cli.unknownCommand': 'Неизвестная команда "{command}". Справка: aigf help',
   },
 };
+
+for (const lang of ['en', 'ru']) Object.assign(STRINGS[lang], TIPS[lang]);
 
 let forced = null;
 

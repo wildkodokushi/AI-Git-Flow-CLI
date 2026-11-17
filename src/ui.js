@@ -31,6 +31,7 @@ export function section(title) {
 export const info = (message) => print(`${c.gray('[INFO]  ')}${message}`);
 export const ok = (message) => print(`${c.green('[OK]    ')}${message}`);
 export const warn = (message) => print(`${c.yellow('[WARN]  ')}${message}`);
+export const tip = (message) => print(`${c.cyan('[TIP]   ')}${message}`);
 
 // ---------------------------------------------------------------------------
 // Input. A TTY gets a normal readline prompt, piped stdin is consumed line by line

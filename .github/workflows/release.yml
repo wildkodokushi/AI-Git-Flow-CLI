@@ -47,3 +47,25 @@ jobs:
         run: gh release create "$GITHUB_REF_NAME" dist/*.tgz dist/SHA256SUMS --generate-notes --title "$GITHUB_REF_NAME"
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # Optional mirror in GitHub Packages. It runs only after the npm release succeeded, so a failure
+  # here never affects the npm package. GitHub Packages requires a scoped name (@owner/name).
+  github-packages:
+    name: Publish to GitHub Packages
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com
+          scope: '@wildkodokushi'
+      - name: Scope the package name for GitHub Packages
+        run: npm pkg set name=@wildkodokushi/ai-git-flow
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
